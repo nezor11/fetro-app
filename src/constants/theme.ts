@@ -1,7 +1,9 @@
 export const COLORS = {
-  primary: '#0056A6',
-  primaryDark: '#003D75',
-  secondary: '#E8A317',
+  primary: '#460032',
+  primaryDark: '#2E0021',
+  primaryLight: '#6B1850',
+  secondary: '#8C1464',
+  accent: '#C23B94',
   background: '#F5F5F5',
   white: '#FFFFFF',
   text: '#333333',
@@ -9,6 +11,7 @@ export const COLORS = {
   textMuted: '#999999',
   border: '#E0E0E0',
   error: '#D32F2F',
+  success: '#4CAF50',
 };
 
 export const FONTS = {
