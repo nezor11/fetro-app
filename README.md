@@ -1,6 +1,6 @@
-# FatroApp - WordPress Mobile App
+# FetroApp - WordPress Mobile App
 
-Aplicación móvil desarrollada con React Native y Expo que consume la REST API de WordPress del entorno de Fatro Ibérica. Proyecto de formación para la especialización en WordPress back-end y desarrollo full-stack JavaScript.
+Aplicación móvil desarrollada con React Native y Expo que consume la REST API de WordPress del entorno de Fatro Ibérica. "Fetro" es la versión independiente y no oficial — un proyecto de formación para la especialización en WordPress back-end y desarrollo full-stack JavaScript.
 
 ## Stack tecnológico
 
@@ -19,8 +19,8 @@ Aplicación móvil desarrollada con React Native y Expo que consume la REST API 
 ## Instalación
 
 ```bash
-git clone https://github.com/novicell-ux/fatro-app.git
-cd fatro-app
+git clone https://github.com/nezor11/fetro-app.git
+cd fetro-app
 npm install
 ```
 
