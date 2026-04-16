@@ -1,4 +1,7 @@
 export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
   MainTabs: undefined;
   PostDetail: { postId: number };
   CategoryPosts: { categoryId: number; categoryName: string };
@@ -10,4 +13,5 @@ export type BottomTabParamList = {
   Categories: undefined;
   Products: undefined;
   Search: undefined;
+  Profile: undefined;
 };

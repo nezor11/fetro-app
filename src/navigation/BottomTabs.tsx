@@ -5,6 +5,7 @@ import HomeScreen from '../screens/HomeScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import ProductsScreen from '../screens/ProductsScreen';
 import SearchScreen from '../screens/SearchScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import { BottomTabParamList } from './types';
 import { COLORS } from '../constants/theme';
 
@@ -16,6 +17,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Categories: '📂',
     Products: '💊',
     Search: '🔍',
+    Profile: '👤',
   };
   return (
     <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
@@ -56,6 +58,11 @@ export default function BottomTabs() {
         name="Search"
         component={SearchScreen}
         options={{ title: 'Buscar' }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Perfil' }}
       />
     </Tab.Navigator>
   );
