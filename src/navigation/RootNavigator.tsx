@@ -6,6 +6,7 @@ import PostDetailScreen from '../screens/PostDetailScreen';
 import CategoryPostsScreen from '../screens/CategoryPostsScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import TrainingDetailScreen from '../screens/TrainingDetailScreen';
+import VetsicsDetailScreen from '../screens/VetsicsDetailScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -59,6 +60,11 @@ export default function RootNavigator() {
             name="TrainingDetail"
             component={TrainingDetailScreen}
             options={{ title: 'Formación' }}
+          />
+          <Stack.Screen
+            name="VetsicsDetail"
+            component={VetsicsDetailScreen}
+            options={{ title: 'Carrera' }}
           />
         </>
       ) : (

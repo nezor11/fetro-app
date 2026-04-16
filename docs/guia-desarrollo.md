@@ -638,3 +638,164 @@ npx expo start
 **Credenciales de prueba**:
 - Email: `jorge.test@novicell.es`
 - Contraseña: `FetroTest2026!`
+
+---
+
+## 18. VetSICS: carreras y eventos deportivos
+
+### El contexto
+
+Fatro patrocina carreras populares (las "VetSICS"). En el WordPress existe el endpoint `/api/user/get_vetsics/` (del plugin `json-api-user`) que devuelve todas las carreras registradas en un post type custom. El equipo quiere que la app muestre:
+
+- Listado dividido en **próximas** y **pasadas**
+- Detalle de cada carrera con descripción HTML, fechas, distancias, info práctica
+- Un CTA de **inscripción** (placeholder ahora, formulario real más adelante)
+
+### La respuesta del endpoint
+
+Cada carrera viene con la estructura típica de un post de WP ampliada con un array de `meta`:
+
+```json
+{
+  "ID": "1234",
+  "post_title": "Maratón de Zaragoza 2026",
+  "post_content": "<p>HTML largo...</p>",
+  "post_excerpt": "<p>HTML corto para la tarjeta...</p>",
+  "post_date": "2026-01-15 10:00:00",
+  "thumb_url": "https://...jpg",
+  "app_img": null,
+  "meta": [
+    { "meta_key": "run_sponsored_select", "meta_value": "15/02/2026" },
+    { "meta_key": "distancias", "meta_value": "5k, 10k, 21k" },
+    { "meta_key": "texto_boton_formulario", "meta_value": "Inscríbete aquí" },
+    { "meta_key": "id_formulario", "meta_value": "7" },
+    ...
+  ]
+}
+```
+
+El array `meta` es **caótico**: las fechas pueden estar en 6 campos distintos, con 2 formatos distintos (`DD/MM/YYYY` o `"15 de Febrero de 2026"`). Las distancias vienen como string con comas. El estado "agotadas" hay que detectarlo leyendo el texto del botón y buscando "agotad".
+
+### Helpers para domar el `meta` array
+
+La clave de `src/services/vetsics.ts` son los helpers que normalizan esa estructura:
+
+```typescript
+// Busca una clave concreta en el array de meta
+export function getMetaValue(meta: VetsicsMeta[], key: string): string {
+  const entry = meta.find((m) => m.meta_key === key);
+  return entry?.meta_value ?? '';
+}
+
+// Extrae la fecha intentando varias fuentes, en orden
+export function getRaceDate(race: VetsicsRace): Date | null {
+  const sources = [
+    getMetaValue(race.meta, 'run_sponsored_select'),
+    getMetaValue(race.meta, 'titulo_del_bloque'),
+    getMetaValue(race.meta, 'indications'),
+    getMetaValue(race.meta, 'more_info'),
+    race.post_excerpt,
+    race.post_title,
+  ];
+
+  for (const source of sources) {
+    // DD/MM/YYYY
+    const m1 = source.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m1) return new Date(+m1[3], +m1[2] - 1, +m1[1]);
+    // "15 de Febrero de 2026"
+    const m2 = source.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
+    if (m2) { /* mapeo de meses en español */ }
+  }
+  return null;
+}
+
+// Separa en futuras/pasadas; si no hay fecha, se considera futura (conservador)
+export function categorizeRaces(races: VetsicsRace[]) {
+  const now = new Date();
+  const future: VetsicsRace[] = [];
+  const past: VetsicsRace[] = [];
+  for (const r of races) {
+    const date = getRaceDate(r);
+    if (!date || date >= now) future.push(r);
+    else past.push(r);
+  }
+  return { future, past };
+}
+```
+
+**Decisión importante**: si no conseguimos parsear ninguna fecha de una carrera, la metemos en "Próximas". Es más seguro que enterrarla en pasadas, porque el usuario al menos la ve.
+
+### Listado con `SectionList` en vez de `FlatList`
+
+Como tenemos dos grupos con cabecera (Próximas / Pasadas), lo idiomático en React Native es usar `SectionList`, no una `FlatList` con un `renderItem` custom que imite grupos:
+
+```tsx
+<SectionList
+  sections={sections}
+  keyExtractor={(item) => item.ID}
+  renderItem={({ item }) => (
+    <VetsicsCard race={item} onPress={() => navigation.navigate(...)} />
+  )}
+  renderSectionHeader={({ section }) => (
+    <View style={styles.sectionHeader}>
+      <Text>{section.emoji} {section.title}</Text>
+      <Text>{section.data.length} carreras</Text>
+    </View>
+  )}
+  stickySectionHeadersEnabled={false}
+/>
+```
+
+`stickySectionHeadersEnabled={false}` porque con el bottom tab bar + el header superior no queremos que la cabecera se pegue mientras se scrollea (ruido visual).
+
+### Render de HTML en el detalle
+
+La descripción, información práctica y otros campos vienen como HTML desde WordPress. Usamos `react-native-render-html`:
+
+```tsx
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
+
+const { width } = useWindowDimensions();
+
+<RenderHtml
+  contentWidth={width - SPACING.md * 2}
+  source={{ html: description }}
+  baseStyle={styles.htmlBase}
+/>
+```
+
+`contentWidth` es obligatorio para que la librería sepa cuánto ocupan las imágenes.
+
+### Alerts que funcionen en web y en móvil
+
+El CTA de inscripción muestra de momento un mensaje placeholder. `Alert.alert` de `react-native` **no funciona en React Native Web**, silenciosamente. Solución cross-platform:
+
+```tsx
+import { Platform, Alert } from 'react-native';
+
+const handleInscribirme = () => {
+  const title = 'Inscripción';
+  const message = 'Próximamente: inscripción online...';
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+```
+
+Cuando integremos el formulario real, esto se sustituirá por `navigation.navigate('VetsicsInscripcion', { raceId, formId })`.
+
+### Pendiente para la siguiente iteración
+
+- **Formulario real de inscripción**: el backend expone `id_formulario` por carrera. Hay que investigar qué endpoint del plugin consume ese form y qué campos espera.
+- **Refactor del bottom tab bar**: ya tenemos 7 pestañas. Cuando añadamos Consultas y Solicitudes vamos a ir a 9. Hay que agruparlas en un hub "Más" (hay un `TODO` en `navigation/types.ts`).
+- **Imágenes fallback**: algunas carreras antiguas no tienen `thumb_url` ni `app_img`. Ahora mostramos un placeholder con emoji 🏃, pero convendría una imagen genérica de marca.
+
+### Lecciones aprendidas
+
+- **No confíes en la estructura del `meta` de WordPress**. Plugins distintos lo escriben con convenciones distintas. Escribe helpers que toleren ausencias y formatos varios.
+- **`SectionList` existe por algo**. No reinventes las cabeceras de sección con una `FlatList`.
+- **`Alert.alert` no es cross-platform** en React Native Web. Si quieres feedback inmediato, combínalo con `window.alert` vía `Platform.OS`.
+- **Parseo de fechas defensivo**: tener una cadena de fallbacks (meta_1 → meta_2 → excerpt → title) es más robusto que fallar si falta un campo concreto. El coste es regex un poco más laxo.
