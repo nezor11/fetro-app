@@ -370,3 +370,271 @@ return { ...cat, postCount: result.total };     // Pero obtenemos el total real
 - Los componentes reutilizables (PostCard) ahorran duplicación
 - Centralizar constantes (API URL, colores) permite cambios rápidos
 - Tipar las respuestas de la API documenta la estructura de datos
+
+---
+
+# Fase 2 — Autenticación
+
+En esta fase ampliamos la app con un sistema de autenticación completo: login, registro, recuperación de contraseña, perfil de usuario y cierre de sesión. También introducimos un proxy local para salvar restricciones de CORS durante el desarrollo en web.
+
+## 10. Elección del mecanismo de autenticación
+
+WordPress ofrece varias alternativas para autenticar peticiones desde una app externa. Las evaluamos antes de elegir:
+
+### Application Passwords
+- **Qué es**: Sistema nativo de WordPress (desde 5.6) que genera contraseñas específicas por aplicación.
+- **Problema**: Funciona con Basic Auth (usuario + contraseña en cada petición). Está pensado para integraciones server-to-server, no para autenticación de usuarios finales desde un cliente móvil.
+- **Descartado**: No queremos exponer credenciales en cada request ni pedir al usuario que genere una app password desde `wp-admin`.
+
+### JWT Authentication (plugin)
+- **Qué es**: Plugin que añade endpoints para generar tokens JWT firmados.
+- **Problema**: Requiere instalar otro plugin en el WordPress de Fatro, mantener un secreto en el servidor, y gestionar expiración/refresh de tokens.
+- **Descartado**: Añadir más dependencias al backend cuando ya existe una alternativa funcionando.
+
+### Plugin `json-api-user` (elegido)
+- **Qué es**: Plugin custom editado por el equipo Fatro que expone endpoints REST sobre las funciones de autenticación nativas de WordPress (`wp_authenticate`, `wp_set_auth_cookie`, etc.).
+- **Ventajas**:
+  - Ya está instalado y mantenido (v3.0.2 a fecha de abril 2026).
+  - Devuelve una cookie de WordPress válida que también sirve para futuras funcionalidades server-side (por ejemplo, si en el futuro mostramos contenido restringido).
+  - Tiene endpoints específicos para registro, recuperación de contraseña, validación de cookie, datos de usuario (`get_currentuserinfo`, `get_userinfo`).
+  - El equipo lo ha estado mejorando para paridad con apps móviles.
+
+**Conclusión**: Usamos `json-api-user` con cookie de sesión persistida en `AsyncStorage`.
+
+---
+
+## 11. Capa de servicios de autenticación
+
+Todo el código de autenticación vive en `src/services/auth.ts`. Es la única capa que habla con el servidor; el resto de la app consume esto a través del `AuthContext`.
+
+### URL base condicional según plataforma
+
+```typescript
+const AUTH_BASE_URL =
+  Platform.OS === 'web'
+    ? 'http://localhost:3001'
+    : 'https://fatroibericas.sg-host.com';
+```
+
+**Por qué**: El navegador bloquea por CORS las peticiones a otro dominio si el servidor no devuelve `Access-Control-Allow-Origin`. El plugin `json-api-user` no envía esa cabecera, así que en web redirigimos por un proxy local. En móvil nativo no hay CORS, así que vamos directos. Esto se explica en detalle más abajo.
+
+### Funciones expuestas
+
+| Función | Endpoint WordPress | Uso |
+|---------|-------------------|-----|
+| `login(email, password)` | `POST /api/user/generate_auth_cookie/` | Valida credenciales, devuelve cookie + datos del usuario |
+| `register(user, email, pass, displayName, nonce)` | `POST /api/user/register/` | Crea un usuario nuevo |
+| `getNonce()` | `GET /api/get_nonce/?controller=user&method=register` | Obtiene un nonce WP requerido por `register` |
+| `retrievePassword(email)` | `POST /api/user/retrieve_password/` | Envía un email de reseteo con el enlace estándar de WP |
+| `validateCookie(cookie)` | `GET /api/user/validate_auth_cookie/?cookie=...` | Comprueba si la cookie guardada sigue siendo válida al iniciar la app |
+| `getStoredAuth()` | — | Lee `AsyncStorage` y valida la cookie contra el servidor |
+| `clearAuth()` | — | Limpia `AsyncStorage` al hacer logout |
+
+### Persistencia en AsyncStorage
+
+Guardamos dos claves:
+- `@fetro_auth_cookie` — la cookie devuelta por WordPress
+- `@fetro_auth_user` — los datos del usuario serializados en JSON
+
+```typescript
+await AsyncStorage.setItem('@fetro_auth_cookie', response.data.cookie);
+await AsyncStorage.setItem('@fetro_auth_user', JSON.stringify(response.data.user));
+```
+
+**Por qué AsyncStorage**: Es el almacenamiento estándar en React Native, funciona igual en Android, iOS y web (usa `localStorage` bajo el capó en web). No guardamos la contraseña, solo la cookie de sesión.
+
+### Manejo de errores
+
+Todos los métodos pasan por `handleNetworkError()` que distingue tres casos:
+1. **Sin respuesta** (problema de red/CORS) → mensaje específico en web diciendo que prueben desde móvil.
+2. **Respuesta con error del servidor** (credenciales inválidas, email duplicado, etc.) → propagamos el mensaje devuelto por el plugin.
+3. **Error desconocido** → mensaje genérico.
+
+---
+
+## 12. Estado global con React Context
+
+Para que cualquier pantalla pueda saber si el usuario está autenticado y para poder hacer login/logout desde cualquier sitio, usamos el patrón **Context + Hook personalizado**.
+
+### `src/context/AuthContext.tsx`
+
+```typescript
+interface AuthContextType {
+  user: UserData | null;
+  cookie: string | null;
+  isLoading: boolean;
+  isLoggedIn: boolean;
+  login: (email, password) => Promise<void>;
+  logout: () => Promise<void>;
+}
+```
+
+**Qué hace el `AuthProvider`**:
+1. **Al montar**: llama a `getStoredAuth()` que lee la cookie de `AsyncStorage` y la valida contra el servidor. Si es válida, restaura la sesión. Si no, limpia el storage.
+2. Durante esa comprobación inicial, `isLoading = true` → el `RootNavigator` muestra un spinner.
+3. Expone `login()` y `logout()` que actualizan el estado global.
+
+**Por qué no Redux o Zustand**: Para este caso (estado de auth, pocas actualizaciones, estructura simple), Context es más que suficiente y sin dependencias extra. Si el estado creciera mucho (carrito de productos, preferencias, múltiples contextos), valoraríamos una librería de estado.
+
+### Hook `useAuth()`
+
+```typescript
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+}
+```
+
+Cualquier pantalla consume el auth así:
+```typescript
+const { user, isLoggedIn, login, logout } = useAuth();
+```
+
+El `throw` si no hay provider es una defensa: si alguien intenta usar el hook fuera del `<AuthProvider>`, falla ruidosamente en desarrollo en vez de devolver `null` y fallar silenciosamente más tarde.
+
+---
+
+## 13. Navegación condicional
+
+El `RootNavigator` decide qué pantallas mostrar según el estado de autenticación:
+
+```tsx
+{isLoggedIn ? (
+  <>
+    <Stack.Screen name="MainTabs" component={BottomTabs} />
+    <Stack.Screen name="PostDetail" ... />
+    <Stack.Screen name="CategoryPosts" ... />
+    <Stack.Screen name="ProductDetail" ... />
+  </>
+) : (
+  <>
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+  </>
+)}
+```
+
+**Por qué dos stacks separados y no uno solo**:
+- **Seguridad**: Si el stack de auth solo contiene Login/Register/ForgotPassword, es imposible navegar a MainTabs sin estar logueado (ni siquiera con un deep link).
+- **Claridad de flujo**: Cuando haces `logout()`, React Navigation desmonta automáticamente todas las pantallas del stack anterior y muestra Login. No hay que hacer `reset` manual.
+- **Animaciones limpias**: El cambio entre auth y app se anima como un switch de stack, no como un push/pop dentro del mismo stack.
+
+### Pestaña "Perfil"
+
+Cuando `isLoggedIn`, las BottomTabs incluyen cinco pestañas: Noticias, Categorías, Productos, Buscar, **Perfil**. El `ProfileScreen` muestra los datos del usuario (nombre, email, avatar, rol) y el botón de "Cerrar sesión".
+
+---
+
+## 14. Proxy CORS para desarrollo web
+
+### El problema
+
+En el navegador, las peticiones AJAX a otro dominio están sujetas a la política **CORS** (Cross-Origin Resource Sharing). Si el servidor no envía `Access-Control-Allow-Origin`, el navegador cancela la petición antes de que el código JavaScript pueda leer la respuesta.
+
+El endpoint `/api/user/` del plugin `json-api-user` **no tiene CORS habilitado** (está pensado para ser consumido desde el propio WordPress o desde apps nativas).
+
+**En móvil nativo no hay CORS**: Android e iOS no aplican esa restricción porque no es un navegador.
+
+### La solución: proxy local
+
+Creamos un pequeño servidor Node (`proxy-server.js`) que:
+1. Escucha en `http://localhost:3001`.
+2. Recibe cada petición de la app y la reenvía tal cual a `https://fatroibericas.sg-host.com`.
+3. Añade la cabecera `Access-Control-Allow-Origin: *` en la respuesta.
+4. Maneja el preflight `OPTIONS` que el navegador envía antes de un POST.
+
+Sin dependencias externas (solo módulos nativos `http` y `https`). Se arranca con:
+
+```bash
+node proxy-server.js
+```
+
+Y la app, gracias a `Platform.OS === 'web'`, apunta a `localhost:3001` en lugar de al dominio real cuando se ejecuta en Chrome.
+
+### ¿Por qué no añadir CORS al plugin?
+
+Podríamos editar el plugin `json-api-user` y añadir `header('Access-Control-Allow-Origin: *')`. Pero:
+- Es código de producción compartido con la web pública.
+- Poner `*` en producción es una decisión de seguridad que no corresponde tomar aquí sin consultar al equipo Fatro.
+- El proxy es una solución **solo para desarrollo local**; en producción la app móvil se empaqueta para Android/iOS (Expo Build) y no pasa por CORS.
+
+---
+
+## 15. Flujo completo de login paso a paso
+
+1. **Arranque de la app**:
+   - `AuthProvider` se monta → `isLoading = true` → `RootNavigator` muestra spinner.
+   - `getStoredAuth()` lee cookie y user de `AsyncStorage`.
+   - Si hay cookie, llama a `validateCookie()` contra el servidor.
+   - Si es válida: `isLoggedIn = true` → se muestran las BottomTabs.
+   - Si no: se borra el storage y se muestra LoginScreen.
+
+2. **El usuario introduce email y contraseña y pulsa "Entrar"**:
+   - `LoginScreen` llama a `login(email, password)` del context.
+   - El context llama a `loginService()` de `auth.ts`.
+   - `auth.ts` hace `POST /api/user/generate_auth_cookie/` (a través del proxy si es web).
+   - WordPress valida las credenciales y devuelve `{ status: 'ok', cookie: '...', user: {...} }`.
+   - `auth.ts` guarda cookie y user en `AsyncStorage`.
+   - El context actualiza el estado → `isLoggedIn = true`.
+   - React Navigation automáticamente cambia al stack de MainTabs.
+
+3. **El usuario usa la app normalmente** (Home, Perfil, etc.). Los datos del usuario están accesibles desde cualquier pantalla con `useAuth()`.
+
+4. **El usuario pulsa "Cerrar sesión"** en Perfil:
+   - Se llama a `logout()` del context.
+   - `clearAuth()` borra las dos claves de `AsyncStorage`.
+   - El context pone `isLoggedIn = false`.
+   - React Navigation muestra LoginScreen automáticamente.
+
+---
+
+## 16. Lecciones aprendidas de la Fase 2
+
+### Autenticación
+- WordPress ofrece varias opciones; elegir la adecuada depende del contexto. No siempre es JWT.
+- Una cookie de sesión + AsyncStorage es una solución simple y válida para apps móviles que hablan con WordPress.
+- Validar la sesión al arranque evita que el usuario vea contenido como logueado si la cookie ha caducado en el servidor.
+
+### CORS
+- CORS es una restricción **del navegador**, no del servidor. En móvil nativo no existe.
+- En desarrollo web, un proxy local es la forma más limpia de evitarlo sin tocar producción.
+- Nunca poner `Access-Control-Allow-Origin: *` en endpoints de auth en producción sin pensarlo.
+
+### React Context
+- Es suficiente para estado global pequeño y poco cambiante (auth, tema, idioma).
+- Para estado grande o con actualizaciones frecuentes (datos de negocio), mejor una librería especializada.
+- El patrón "crear un hook personalizado que valida el context" da muy buenos errores en desarrollo.
+
+### Navegación
+- Separar stacks de auth y app principal es más seguro y más claro que un stack único.
+- React Navigation maneja automáticamente el swap de stacks cuando cambia el estado condicional.
+
+### TypeScript
+- Tipar la respuesta del servidor (`LoginResponse`, `UserData`, etc.) evita accesos a propiedades inexistentes.
+- Tipar el `RootStackParamList` evita typos en los `navigation.navigate()`.
+
+---
+
+## 17. Cómo arrancar el entorno completo
+
+```bash
+# Terminal 1 — Proxy CORS (solo si pruebas en web)
+cd FatroApp
+node proxy-server.js
+
+# Terminal 2 — Expo
+cd FatroApp
+npx expo start
+
+# Desde Expo puedes:
+#   w  → abrir en web (requiere proxy activo)
+#   a  → abrir en emulador Android
+#   i  → abrir en emulador iOS
+#   Escanear el QR con Expo Go en tu móvil físico
+```
+
+**Credenciales de prueba**:
+- Email: `jorge.test@novicell.es`
+- Contraseña: `FetroTest2026!`
