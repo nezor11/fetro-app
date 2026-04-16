@@ -5,6 +5,7 @@ import BottomTabs from './BottomTabs';
 import PostDetailScreen from '../screens/PostDetailScreen';
 import CategoryPostsScreen from '../screens/CategoryPostsScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
+import TrainingDetailScreen from '../screens/TrainingDetailScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -53,6 +54,11 @@ export default function RootNavigator() {
             name="ProductDetail"
             component={ProductDetailScreen}
             options={{ title: 'Producto' }}
+          />
+          <Stack.Screen
+            name="TrainingDetail"
+            component={TrainingDetailScreen}
+            options={{ title: 'Formación' }}
           />
         </>
       ) : (
