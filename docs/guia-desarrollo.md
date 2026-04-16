@@ -799,3 +799,174 @@ Cuando integremos el formulario real, esto se sustituirá por `navigation.naviga
 - **`SectionList` existe por algo**. No reinventes las cabeceras de sección con una `FlatList`.
 - **`Alert.alert` no es cross-platform** en React Native Web. Si quieres feedback inmediato, combínalo con `window.alert` vía `Platform.OS`.
 - **Parseo de fechas defensivo**: tener una cadena de fallbacks (meta_1 → meta_2 → excerpt → title) es más robusto que fallar si falta un campo concreto. El coste es regex un poco más laxo.
+
+---
+
+## 19. Consultas: directorio de especialistas veterinarios
+
+### El contexto
+
+Fatro tiene un equipo de especialistas (dermatología, oncología, medicina felina, traumatología, parasitología…) al que los profesionales veterinarios pueden plantear consultas técnicas. En WordPress existe un CPT `consulta` (cada post es la **ficha** de un especialista, no una consulta enviada) agrupado por una taxonomía `especialidad`.
+
+El endpoint del plugin que lo expone es `/api/user/get_specialities/`. **Nota importante**: el nombre del endpoint es `get_specialities` pero el CPT se llama `consulta`. Saberlo ahorra media hora de buscar endpoints que no existen (como me pasó a mí).
+
+### Lo que no existe (todavía)
+
+El plugin **no tiene** un endpoint para registrar consultas enviadas por el usuario (algo tipo `post_consulta` o `save_query`). Eso significa que en esta fase del MVP:
+
+- La app actúa como **directorio de contacto**.
+- El botón "Contactar con el especialista" abre un `mailto:` al buzón de Fatro con asunto y cuerpo pre-rellenados.
+- Cuando el backend exponga un endpoint real, se sustituye el `mailto:` por navegación a una pantalla `ConsultaForm` que POST-ee al endpoint.
+
+Documentamos este placeholder con un TODO claro en `ConsultaDetailScreen.tsx` para que quien lo retome no tenga que arqueologizar.
+
+### Estructura del response
+
+```json
+{
+  "status": "ok",
+  "specialities": {
+    "speciality_anico": [ {...}, {...} ],
+    "speciality_gan": [ {...} ],
+    "speciality_por": [ {...} ],
+    "speciality_avicultura": [],
+    "speciality_cunicultura": [],
+    "speciality_equino": [],
+    "speciality_ovino-caprino": [],
+    "speciality_vetsics": []
+  }
+}
+```
+
+El backend siempre devuelve **las ocho claves**, pongas o no especialistas dentro. La app filtra las vacías en `buildSpecialityGroups()`.
+
+Cada especialista tiene esta forma (todos los campos son string, incluso los ids):
+
+```typescript
+interface Specialist {
+  specialist_img: string;   // id de media (como string)
+  thumb_url: string;        // URL de la imagen
+  speciality: string;       // título del post: "Traumatología", "Oncología"...
+  specialist_name: string;  // "Nacho Calvo"
+  specialist_cv: string;    // CV corto ("LV, PhD, CertSAS, DipECVS...")
+  specialist_slug: string;  // slug único dentro del grupo
+  more_info: string;        // opcional, puede venir vacío
+  interes: string;          // id de categoría principal
+  linea_negocio: 'ANICO' | 'GANADERIA';
+  category: string;         // etiqueta legible ("Animales de compañía")
+}
+```
+
+### Agrupar y ordenar los grupos
+
+Como la API nos devuelve un mapa con claves tipo `speciality_anico`, conviene normalizarlo a una lista de grupos con título humano y emoji. Eso se hace en el servicio, no en la pantalla:
+
+```typescript
+const GROUP_PRIORITY: Record<string, number> = {
+  speciality_anico: 0,
+  speciality_gan: 1,
+  speciality_por: 2,
+  speciality_equino: 3,
+  'speciality_ovino-caprino': 4,
+  speciality_avicultura: 5,
+  speciality_cunicultura: 6,
+};
+
+export function buildSpecialityGroups(map) {
+  const groups = [];
+  for (const [key, arr] of Object.entries(map)) {
+    if (!arr || arr.length === 0) continue;  // filtra vacíos
+    groups.push({
+      key,
+      title: arr[0].category || prettifyKey(key),
+      emoji: getCategoryEmoji(arr[0].linea_negocio, arr[0].category),
+      specialists: arr,
+    });
+  }
+  groups.sort((a, b) => {
+    const pa = GROUP_PRIORITY[a.key] ?? 100;
+    const pb = GROUP_PRIORITY[b.key] ?? 100;
+    if (pa !== pb) return pa - pb;
+    return b.specialists.length - a.specialists.length;
+  });
+  return groups;
+}
+```
+
+El título humano y el emoji se deducen del **primer especialista** de cada grupo (campos `category` y `linea_negocio`). Es más robusto que hardcodear un mapa `anico → "Animales de compañía"` porque si el backend cambia la etiqueta la app se entera automáticamente.
+
+### Navegar al detalle sin una petición extra
+
+No hay `get_specialist_by_slug/` en el plugin. Para evitar un endpoint nuevo, la pantalla de detalle **re-pide el mapa completo** y filtra por `groupKey + slug`:
+
+```tsx
+// ConsultasScreen.tsx
+onPress={() =>
+  navigation.navigate('ConsultaDetail', {
+    groupKey: section.key,
+    slug: item.specialist_slug,
+  })
+}
+
+// ConsultaDetailScreen.tsx
+useEffect(() => {
+  (async () => {
+    const map = await getSpecialities(cookie);
+    const found = findSpecialistBySlug(
+      map,
+      route.params.groupKey,
+      route.params.slug
+    );
+    // ...
+  })();
+}, [cookie, route.params.groupKey, route.params.slug]);
+```
+
+Esto es aceptable porque:
+
+1. El payload es pequeño (~9 KB con 21 especialistas).
+2. El endpoint es rápido y barato.
+3. Si mañana se añade un `get_specialist_by_slug/` dedicado, solo hay que cambiar el interior del `useEffect`.
+
+Si creciese mucho, la alternativa sería cachear el map en `AuthContext` o en una capa `SpecialitiesContext` tras la primera petición.
+
+### Patrón de contacto cross-platform
+
+El CTA de "Contactar" abre `mailto:` con asunto y cuerpo pre-rellenados:
+
+```tsx
+const handleContactar = () => {
+  const subject = `Consulta para ${name} (${speciality})`;
+  const body = `Hola,\n\nMe gustaría plantear una consulta...`;
+  const mailto = `mailto:consultas@fatroiberica.es?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  if (Platform.OS === 'web') {
+    window.alert('Próximamente podrás enviar...');
+    window.location.href = mailto;
+    return;
+  }
+
+  Alert.alert('Contactar con el especialista', '...', [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Abrir correo', onPress: () => Linking.openURL(mailto) },
+  ]);
+};
+```
+
+Dos detalles a tener en cuenta:
+
+- **`Linking.openURL()` de React Native** es la forma idiomática de abrir URLs externas (incluidos `mailto:`, `tel:`, `https://`) en móvil.
+- **En web basta con `window.location.href`** para disparar `mailto:`.
+
+### El tab bar empieza a apretar
+
+Con Consultas ya vamos **8 pestañas** en el bottom tab bar (Home, Categorías, Productos, Formación, VetSICS, Consultas, Buscar, Perfil). En iPhones pequeños y Androids de gama baja las etiquetas ya se cortan.
+
+Cuando añadamos **Solicitudes** (la 9ª, próxima feature) toca refactorizar a un **hub "Más"**: una pestaña que abre una pantalla tipo menú con todo lo que no cabe en la tab bar principal. Este plan está documentado con un TODO en `src/navigation/types.ts`.
+
+### Lecciones aprendidas
+
+- **No asumas los nombres de endpoints**. Pensé que era `get_consultas` porque la feature se llama "Consultas" y el CPT se llama `consulta`, pero el endpoint se llama `get_specialities`. Abrir el `User.php` del plugin y hacer `grep` por la palabra clave del dominio fue más rápido que adivinar.
+- **Un endpoint "inexistente" se distingue de uno "existente con credenciales malas" por el `Content-Type`**. `application/json` = endpoint válido (te devuelve un JSON de error). `text/html` = endpoint inexistente (te devuelve la página de error de WordPress).
+- **No meter lógica de UI en la pantalla**. El mapeo de emoji por categoría y el orden de los grupos viven en el servicio, que es reusable desde card + detail + (mañana) tab icon.
+- **Cuando falte un endpoint, usa placeholders útiles**. `mailto:` pre-rellenado no es una solución definitiva, pero permite que la feature se libere ya y que el negocio valide el flujo de contacto real con usuarios reales. Documenta claramente el TODO para que el siguiente dev sepa qué sustituir.

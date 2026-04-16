@@ -8,6 +8,7 @@ import SearchScreen from '../screens/SearchScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import TrainingsScreen from '../screens/TrainingsScreen';
 import VetsicsScreen from '../screens/VetsicsScreen';
+import ConsultasScreen from '../screens/ConsultasScreen';
 import { BottomTabParamList } from './types';
 import { COLORS } from '../constants/theme';
 
@@ -20,6 +21,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Products: '💊',
     Trainings: '📚',
     Vetsics: '🏃',
+    Consultas: '👨‍⚕️',
     Search: '🔍',
     Profile: '👤',
   };
@@ -67,6 +69,11 @@ export default function BottomTabs() {
         name="Vetsics"
         component={VetsicsScreen}
         options={{ title: 'VetSICS' }}
+      />
+      <Tab.Screen
+        name="Consultas"
+        component={ConsultasScreen}
+        options={{ title: 'Consultas' }}
       />
       <Tab.Screen
         name="Search"

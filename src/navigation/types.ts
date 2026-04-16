@@ -8,16 +8,19 @@ export type RootStackParamList = {
   ProductDetail: { productId: number };
   TrainingDetail: { trainingId: string };
   VetsicsDetail: { raceId: string };
+  ConsultaDetail: { groupKey: string; slug: string };
 };
 
-// TODO: cuando añadamos Consultas y Solicitudes, refactorizar estas pestañas
-// hacia un hub "Más" para evitar apretar el bottom tab bar.
+// TODO: con Consultas ya vamos 8 tabs. Cuando añadamos Solicitudes (la 9ª)
+// hay que refactorizar estas pestañas hacia un hub "Más" para evitar apretar
+// el bottom tab bar.
 export type BottomTabParamList = {
   Home: undefined;
   Categories: undefined;
   Products: undefined;
   Trainings: undefined;
   Vetsics: undefined;
+  Consultas: undefined;
   Search: undefined;
   Profile: undefined;
 };
