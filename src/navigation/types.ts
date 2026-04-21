@@ -11,6 +11,7 @@ export type RootStackParamList = {
   ConsultaDetail: { groupKey: string; slug: string };
   SolicitudDetail: { solicitudId: string };
   EditProfile: undefined;
+  MyRequests: undefined;
 };
 
 /**

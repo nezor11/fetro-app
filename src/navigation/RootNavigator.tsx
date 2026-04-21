@@ -10,6 +10,7 @@ import VetsicsDetailScreen from '../screens/VetsicsDetailScreen';
 import ConsultaDetailScreen from '../screens/ConsultaDetailScreen';
 import SolicitudDetailScreen from '../screens/SolicitudDetailScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import MyRequestsScreen from '../screens/MyRequestsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -83,6 +84,11 @@ export default function RootNavigator() {
             name="EditProfile"
             component={EditProfileScreen}
             options={{ title: 'Editar perfil' }}
+          />
+          <Stack.Screen
+            name="MyRequests"
+            component={MyRequestsScreen}
+            options={{ title: 'Mis solicitudes' }}
           />
         </>
       ) : (

@@ -79,13 +79,22 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{user.email}</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => navigation.navigate('EditProfile')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.editButtonText}>✏️ Editar perfil</Text>
-      </TouchableOpacity>
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('EditProfile')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionButtonText}>✏️ Editar perfil</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('MyRequests')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionButtonText}>📦 Mis solicitudes</Text>
+        </TouchableOpacity>
+      </View>
 
       {loading ? (
         <View style={styles.loadingBlock}>
@@ -193,19 +202,25 @@ const styles = StyleSheet.create({
     color: COLORS.white + 'CC',
     marginTop: SPACING.xs,
   },
-  editButton: {
+  actionsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
     marginHorizontal: SPACING.md,
     marginTop: SPACING.md,
+  },
+  actionButton: {
+    flex: 1,
     backgroundColor: COLORS.white,
     paddingVertical: SPACING.sm + 4,
+    paddingHorizontal: SPACING.sm,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.primary + '30',
   },
-  editButtonText: {
+  actionButtonText: {
     color: COLORS.primary,
-    fontSize: FONTS.regular,
+    fontSize: FONTS.small,
     fontWeight: '700',
   },
   loadingBlock: {

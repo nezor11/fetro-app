@@ -1554,3 +1554,118 @@ Tras la migración quedamos con **dos estilos de data-fetching** en la app:
 - **Centraliza `queryKey` en un objeto**. Strings literales esparcidos por la app es una bomba de relojería cuando haces invalidaciones desde mutations.
 - **`staleTime` es la configuración que más importa**. Si lo dejas en el default (`0`, lo marca como stale inmediatamente), pierdes gran parte del valor. Piensa cuánto tiempo tus datos son "frescos" y configúralo acorde.
 - **No migrar todo a `useMutation`**. Las escrituras tienen flows muy variados (optimistic, offline, retry, forms) y a veces `async/await` manual es más claro. `useMutation` brilla cuando quieres optimistic updates + invalidación de queries relacionadas.
+
+---
+
+## 24. "Mis solicitudes": agregar datos de múltiples endpoints
+
+### El contexto
+
+El backend ya lleva un contador de cuántas veces el usuario ha pedido cada cosa. Está en dos endpoints distintos:
+
+- `get_vetsics` → cada carrera trae `requested` (conteo de inscripciones)
+- `get_solicitudes` → cada promoción trae `requested` (conteo de envíos de formulario)
+
+En ambos casos el conteo se resuelve server-side con una SQL contra `flamingo_inbound` (la tabla del plugin Flamingo que guarda todas las submissions de Contact Form 7) filtrando por título del post y email del usuario. Exacto, pero costoso.
+
+La feature "Mis solicitudes" reúne en una sola pantalla todo lo que el usuario ya pidió — útil como histórico personal y para evitar que pida algo varias veces por error.
+
+### Compartir cache entre pantallas distintas
+
+Ésta es la primera feature que aprovecha de verdad el trabajo de TanStack Query. La pantalla necesita datos de VetSICS **y** Solicitudes, pero esas pantallas ya existen y probablemente el usuario las ha visitado antes. Las mismas `queryKey`s que usan ahí (`queryKeys.vetsics(cookie)`, `queryKeys.solicitudes(cookie)`) las reusamos aquí:
+
+```tsx
+const vetsicsQuery = useQuery({
+  queryKey: queryKeys.vetsics(cookie),
+  queryFn: () => getVetsicsRaces(cookie!),
+  enabled: !!cookie,
+});
+
+const solicitudesQuery = useQuery({
+  queryKey: queryKeys.solicitudes(cookie),
+  queryFn: () => getSolicitudes(cookie!),
+  enabled: !!cookie,
+});
+```
+
+Resultado: si el usuario ha pasado por VetSICS o Solicitudes en los últimos 5 minutos, entrar en "Mis solicitudes" es **instantáneo** — cero fetches. Si no, los dos se disparan en paralelo.
+
+### Tipo discriminado para un SectionList heterogéneo
+
+El problema: el SectionList tiene que pintar **dos tipos de card distintos** (`VetsicsCard` para carreras y `SolicitudCard` para promociones) en el mismo `renderItem`. En TypeScript la solución es un tipo unión discriminada:
+
+```typescript
+type RequestedItem =
+  | { kind: 'vetsics'; count: number; race: VetsicsRace }
+  | { kind: 'solicitud'; count: number; solicitud: Solicitud };
+```
+
+Y en el render hacemos type narrowing con el discriminador:
+
+```tsx
+renderItem={({ item }) => (
+  item.kind === 'vetsics' ? (
+    <VetsicsCard race={item.race} onPress={...} />
+  ) : (
+    <SolicitudCard solicitud={item.solicitud} onPress={...} />
+  )
+)}
+```
+
+TypeScript entiende perfectamente que dentro del `if (item.kind === 'vetsics')` `item.race` existe y `item.solicitud` no. Zero casts, zero `as`, zero `any`.
+
+### Badge "Solicitado N veces" sin tocar los cards
+
+Para no duplicar las cards o añadirles props que solo esta pantalla usaría, pongo un badge encima-izquierda con un `negative margin`:
+
+```tsx
+countBadge: {
+  marginTop: SPACING.xs,
+  marginBottom: -SPACING.xs, // engancha visualmente con la card de abajo
+  alignSelf: 'flex-start',
+  zIndex: 1,
+  // ...
+},
+```
+
+El `marginBottom: -SPACING.xs` hace que el badge "abrace" la card (superposición mínima). Alternativa más robusta hubiera sido envolver en un `View` contenedor con `padding-top` extra en la card, pero modificaría el spacing interno de las otras pantallas. El negative margin aquí es localizado y no afecta a nadie más.
+
+### Refetch paralelo con deduplicación automática
+
+Al hacer pull-to-refresh disparamos las dos queries a la vez:
+
+```tsx
+const refetchAll = () => {
+  vetsicsQuery.refetch();
+  solicitudesQuery.refetch();
+};
+```
+
+No hace falta `Promise.all` ni hacer `await` — TanStack Query maneja cada query de forma independiente y gestiona sus propios estados. Si alguien ya llamó a `vetsicsQuery.refetch()` en otra pantalla hace 100 ms, este segundo `refetch()` se deduplica.
+
+### El mock de desarrollo como técnica
+
+El usuario de test tenía `requested: "0"` en todo, así que sin datos reales la pantalla solo mostraba estado vacío. Para evaluar el diseño en "lleno" añadí temporalmente un mock:
+
+```typescript
+// TEMPORAL — quitar antes del commit final
+const DEV_MOCK_REQUESTS = __DEV__;
+
+// En el map:
+const count = DEV_MOCK_REQUESTS && idx < 2
+  ? idx + 1
+  : parseRequested(race.requested);
+```
+
+Claves del patrón:
+
+- **Respeto `__DEV__`** → Metro define esta constante global (`true` en desarrollo, `false` en builds de producción). Incluso si se me olvidara quitar el toggle, Release no inyectaría nada.
+- **Documenté el mock con un comentario TODO** explícito para que cualquiera al revisar el código entendiera que era temporal.
+- **Lo eliminé por completo antes del commit**, no lo dejé en `false`. Código muerto es peor que código vivo; el git log guarda la historia si hay que recuperarlo.
+
+### Lecciones aprendidas
+
+- **El cache compartido entre pantallas es el superpoder de TanStack Query**. Una vez tienes las queryKeys centralizadas, componer nuevas vistas a partir de endpoints existentes es casi gratis.
+- **Tipos unión discriminada para listas heterogéneas**. Mucho más seguro que un cast `as any` o un `renderItem` con switch-case sobre un campo opcional.
+- **Estado vacío bien diseñado es una feature**. El 90% de los usuarios nuevos verán esta pantalla vacía. Si el copy es útil ("aparecerá aquí cuando rellenes una solicitud") y el diseño no se siente roto, la pantalla cumple su función incluso sin datos.
+- **Mocks en dev: `__DEV__` + borrado antes del commit**. Usar toggles en `false` que se quedan en el código es una fuente conocida de bugs ("¿por qué la pantalla se comporta raro?" → "ah, el mock estaba en true").
