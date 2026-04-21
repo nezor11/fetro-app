@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,15 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import ConsultaCard from '../components/ConsultaCard';
 import {
   getSpecialities,
   buildSpecialityGroups,
-  SpecialitiesMap,
   Specialist,
 } from '../services/consultas';
 import { useAuth } from '../context/AuthContext';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
@@ -37,33 +38,18 @@ interface Section {
 export default function ConsultasScreen() {
   const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
-  const [map, setMap] = useState<SpecialitiesMap>({});
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!cookie) return;
-    try {
-      setError(null);
-      const data = await getSpecialities(cookie);
-      setMap(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar especialistas');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [cookie]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
+  const {
+    data: map = {},
+    isLoading,
+    isRefetching,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.consultas(cookie),
+    queryFn: () => getSpecialities(cookie!),
+    enabled: !!cookie,
+  });
 
   const sections = useMemo<Section[]>(() => {
     return buildSpecialityGroups(map).map((g) => ({
@@ -74,7 +60,7 @@ export default function ConsultasScreen() {
     }));
   }, [map]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -88,7 +74,9 @@ export default function ConsultasScreen() {
         <Text style={styles.errorTitle}>
           No se pudieron cargar las consultas
         </Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>
+          {(error as Error).message || 'Error desconocido'}
+        </Text>
       </View>
     );
   }
@@ -125,8 +113,8 @@ export default function ConsultasScreen() {
       contentContainerStyle={{ paddingVertical: SPACING.sm }}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
+          refreshing={isRefetching}
+          onRefresh={refetch}
           colors={[COLORS.primary]}
           tintColor={COLORS.primary}
         />

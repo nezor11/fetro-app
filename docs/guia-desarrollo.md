@@ -1356,3 +1356,201 @@ Validación agresiva en cliente = formularios frustrantes. Validación en servid
 - **`useFocusEffect` > estado global** para pantallas hermanas con el mismo dato. Si la inversión en Context/React Query no está justificada todavía, un simple fetch on focus es idiomático y no añade dependencia.
 - **Bug de seguridad del plugin**: `update_user_meta_vars` itera `$_REQUEST` sin filtrar, así que WooCommerce inyecta sus propias nonces al request y acaban como meta del usuario. No es crítico (solo afecta a tu propio user), pero conviene que el backend filtre a una whitelist de campos esperados. Está comentado a Juan Luis.
 - **Sanitize del teléfono**: WP elimina el `+` del teléfono si el sanitize es `sanitize_text_field`. En nuestro flujo llega bien al backend (URLSearchParams encodea correctamente), pero el backend lo despoja. Si el negocio lo necesita conservar, hay que parchear el backend con un sanitize específico para teléfonos.
+
+---
+
+## 23. Cache layer: TanStack Query
+
+### El contexto
+
+Tras las 9 pantallas con data-fetching, el patrón empezaba a doler:
+
+```tsx
+const [data, setData] = useState([]);
+const [loading, setLoading] = useState(true);
+const [refreshing, setRefreshing] = useState(false);
+const [error, setError] = useState<string | null>(null);
+
+const load = useCallback(async () => {
+  if (!cookie) return;
+  try {
+    setError(null);
+    const result = await getSomething(cookie);
+    setData(result);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, [cookie]);
+
+useEffect(() => { load(); }, [load]);
+
+const onRefresh = () => {
+  setRefreshing(true);
+  load();
+};
+```
+
+Cada pantalla era **~40 líneas de boilerplate** idénticas. Además **no había cache**: salir de una pestaña y volver en 30 segundos re-lanzaba la petición. Multiplica por 9 pestañas y con 100 usuarios activos el servidor de Fatro se llevaba paliza innecesaria.
+
+### Por qué TanStack Query (y no Context manual o SWR)
+
+| Opción | Pros | Contras |
+|---|---|---|
+| **Context manual** | Cero deps; control total | Hay que escribir cache, retry, invalidación, stale time, refetch on focus nosotros. Reinventar la rueda. |
+| **SWR** | Más simple; misma filosofía | Menos traction en RN, integración peor con `RefreshControl`, dev tools menos pulidas. |
+| **TanStack Query v5** | Estándar de facto 2024-2026; hooks idiomáticos (`useQuery`, `useInfiniteQuery`); pull-to-refresh plug-and-play; cache por `queryKey`; devtools; soporta offline con persistPlugin si un día lo queremos | Es una dep extra (~20 KB gzipped). No es relevante en una app con imágenes y HTML renderer. |
+
+Elegimos **TanStack Query v5**. Añadir `@tanstack/react-query` + config y envolver `App.tsx` en `QueryClientProvider` son 10 líneas.
+
+### Configuración sensata desde el día uno
+
+```typescript
+// src/queryClient.ts
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,      // 5 min
+      gcTime: 10 * 60 * 1000,        // 10 min
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+```
+
+Razonamientos:
+
+- **`staleTime: 5 min`** → los datos de Fatro cambian en escala de minutos (carreras publicadas, solicitudes activadas), no de segundos. Durante los 5 min, volver a una pantalla usa el cache sin fetch. Más tiempo sería mostrar datos obsoletos; menos sería pegarle al servidor sin beneficio.
+- **`gcTime: 10 min`** → tras 10 min sin que nadie use el query, el cache se borra para no inflar memoria en móviles modestos.
+- **`retry: 1`** → un reintento automático cubre timeouts transitorios. Más intentos son ruido (mejor ver el error rápido y hacer pull-to-refresh manual).
+- **`refetchOnWindowFocus: false`** → en mobile es irrelevante, pero poner a `true` en web causa fetches al volver a la pestaña del navegador y comportamiento raro. Lo dejamos off por consistencia entre plataformas.
+
+### Convención de `queryKey` en un mapa central
+
+Para evitar typos y saber dónde vive cada query, centralizamos las keys en `queryClient.ts`:
+
+```typescript
+export const queryKeys = {
+  solicitudes: (cookie: string | null) => ['solicitudes', cookie] as const,
+  vetsics: (cookie: string | null) => ['vetsics', cookie] as const,
+  consultas: (cookie: string | null) => ['consultas', cookie] as const,
+  trainings: (cookie: string | null) => ['trainings', cookie] as const,
+  // ...
+};
+```
+
+Uso en cada pantalla:
+
+```tsx
+const { data } = useQuery({
+  queryKey: queryKeys.solicitudes(cookie),
+  queryFn: () => getSolicitudes(cookie!),
+  enabled: !!cookie,
+});
+```
+
+Ventajas:
+
+- Cuando añadamos una mutación (ej. "enviar solicitud"), podremos invalidar todas las solicitudes con un `queryClient.invalidateQueries({ queryKey: ['solicitudes'] })` y todas las pantallas que las consuman se refrescan solas.
+- Si alguien escribe `queryKeys.solicitudse(cookie)` el compilador se queja; si escribe `'solicitudse'` como string literal, no.
+
+### Pagination: `useInfiniteQuery`
+
+`HomeScreen` y `ProductsScreen` tienen scroll infinito. `useInfiniteQuery` lo resuelve con 4 parámetros:
+
+```tsx
+const {
+  data,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  isRefetching,
+  refetch,
+} = useInfiniteQuery({
+  queryKey: ['posts', 'home'],
+  queryFn: ({ pageParam }) => getPosts(pageParam, 10),
+  initialPageParam: 1,
+  getNextPageParam: (lastPage, allPages) => {
+    const nextPage = allPages.length + 1;
+    return nextPage <= lastPage.totalPages ? nextPage : undefined;
+  },
+});
+
+const posts = data?.pages.flatMap((p) => p.data) ?? [];
+```
+
+- `initialPageParam: 1` → página de arranque.
+- `getNextPageParam` → decide si hay siguiente página mirando los metadatos del último payload (`totalPages` del header `X-WP-TotalPages`). Devolver `undefined` dice "ya no hay más", `hasNextPage` se vuelve `false`.
+- `data.pages` es un array `[page1, page2, ...]` que aplanamos con `flatMap`.
+
+Engancharlo al `FlatList`:
+
+```tsx
+<FlatList
+  onEndReached={() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }}
+  onEndReachedThreshold={0.5}
+  refreshControl={
+    <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+  }
+/>
+```
+
+Comparado con el patrón manual anterior (`page`, `totalPages`, `loadingMore`, `setPage`, etc.), son **~20 líneas menos** por pantalla.
+
+### Debounce + cache en SearchScreen
+
+Búsqueda con cache por término es particularmente satisfactoria. El patrón:
+
+```tsx
+const [query, setQuery] = useState('');
+const [debounced, setDebounced] = useState('');
+
+useEffect(() => {
+  const t = setTimeout(() => setDebounced(query.trim()), 500);
+  return () => clearTimeout(t);
+}, [query]);
+
+const { data, isLoading } = useQuery({
+  queryKey: queryKeys.search(debounced),
+  queryFn: () => searchPostsAndProducts(debounced),
+  enabled: debounced.length >= 2,
+});
+```
+
+Lo interesante es que si el usuario escribe "fatrobendan", borra, y vuelve a escribir "fatrobendan" → el segundo resultado es **instantáneo** desde cache. Sin tocar servidor. Sin código extra.
+
+`enabled: debounced.length >= 2` es el patrón idiomático para "no arranques la query hasta que se cumpla X condición". También lo usamos con `enabled: !!cookie` para no disparar fetches antes de que `AuthContext` haya hidratado la sesión.
+
+### `useQuery` vs `useFocusEffect` — cuándo cuál
+
+Tras la migración quedamos con **dos estilos de data-fetching** en la app:
+
+| Escenario | Patrón |
+|---|---|
+| Pantallas de **lectura** (listados, detalles) | `useQuery` con cache de 5 min |
+| Pantallas de **escritura** + lectura que debe reflejarla (ProfileScreen ↔ EditProfileScreen) | `useFocusEffect` + fetch manual |
+
+¿Por qué no migrar también las de escritura a `useQuery` + `useMutation`? Porque el flujo "edita → guarda → navega atrás → el perfil se actualiza" ya funciona muy bien con `useFocusEffect`, y añadir `useMutation` + `queryClient.invalidateQueries` complica un flujo simple sin aportar valor. **Regla de oro**: migrar a `useQuery` solo cuando el cache compensa la complejidad. Para una lectura puntual tras escritura, el patrón manual es más directo.
+
+### Pitfalls que encontré en el camino
+
+1. **`enabled: !!cookie` es obligatorio** en pantallas con auth. Sin él, la primera renderización dispara `queryFn(null)` que lanza error antes de que `AuthContext` termine de leer la cookie de `AsyncStorage`.
+
+2. **`error` es de tipo `unknown` en TS estricto**. Hay que hacer `(error as Error).message` o validar con `error instanceof Error`. Decidimos el cast por pragmatismo — todas nuestras queries lanzan `Error`, nunca strings ni objetos raros.
+
+3. **`isRefetching` vs `isLoading`**. `isLoading` solo es `true` en el primer fetch. `isRefetching` es `true` en cada refetch (incluido pull-to-refresh). Enganchar `RefreshControl.refreshing` a `isRefetching`, no a `isLoading`.
+
+4. **El `queryKey` debe incluir dependencias**. Si tu query depende de `cookie`, el queryKey debe ser `['solicitudes', cookie]` y NO `['solicitudes']`. Si no, logout + login no dispara refetch porque TanStack Query cree que es la misma query.
+
+### Lecciones aprendidas
+
+- **Evalúa cache layer antes de que duela**. Llegar a 9 pantallas con boilerplate duplicado fue tarde; con 4-5 ya se veía venir. La siguiente app, TanStack Query desde el día uno.
+- **`useInfiniteQuery` es un regalo** si tienes paginación. El código manual con `page`/`totalPages`/`loadingMore` es famoso por bugs de race condition (doble fetch al llegar al final, `setState` en componente desmontado). Todo eso te lo ahorra.
+- **Centraliza `queryKey` en un objeto**. Strings literales esparcidos por la app es una bomba de relojería cuando haces invalidaciones desde mutations.
+- **`staleTime` es la configuración que más importa**. Si lo dejas en el default (`0`, lo marca como stale inmediatamente), pierdes gran parte del valor. Piensa cuánto tiempo tus datos son "frescos" y configúralo acorde.
+- **No migrar todo a `useMutation`**. Las escrituras tienen flows muy variados (optimistic, offline, retry, forms) y a veces `async/await` manual es más claro. `useMutation` brilla cuando quieres optimistic updates + invalidación de queries relacionadas.

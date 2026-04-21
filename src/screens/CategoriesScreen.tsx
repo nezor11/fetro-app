@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import { getCategories, WPCategory } from '../services/categories';
 import { getPosts } from '../services/posts';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
@@ -114,39 +116,51 @@ function CategoryItem({
 
 export default function CategoriesScreen() {
   const navigation = useNavigation<Nav>();
-  const [tree, setTree] = useState<CategoryWithPostCount[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const cats = await getCategories(100, false);
-        // Check actual post counts for each category
-        const withCounts = await Promise.all(
-          cats.map(async (cat) => {
-            try {
-              const result = await getPosts(1, 1, cat.id);
-              return { ...cat, postCount: result.total, children: [] as CategoryWithPostCount[] };
-            } catch {
-              return { ...cat, postCount: 0, children: [] as CategoryWithPostCount[] };
-            }
-          })
-        );
-        setTree(buildTree(withCounts));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  /**
+   * Hacemos dos peticiones en cadena dentro de una sola query:
+   * 1. `getCategories(100)` — trae todas las categorías de WP.
+   * 2. Por cada categoría hacemos un `getPosts(1, 1, cat.id)` en
+   *    paralelo solo para leer el contador total desde el header
+   *    X-WP-Total. Es un workaround: WP no devuelve el post_count en
+   *    /categories cuando `hide_empty=false`, pero queremos saber
+   *    qué categorías tienen posts para filtrarlas.
+   *
+   * TanStack Query cachea el resultado final (árbol filtrado) durante
+   * `staleTime` (5 min por defecto), así que entrar/salir de la
+   * pantalla no re-ejecuta las N peticiones.
+   */
+  const { data: tree = [], isLoading } = useQuery({
+    queryKey: queryKeys.categories(),
+    queryFn: async () => {
+      const cats = await getCategories(100, false);
+      const withCounts = await Promise.all(
+        cats.map(async (cat) => {
+          try {
+            const result = await getPosts(1, 1, cat.id);
+            return {
+              ...cat,
+              postCount: result.total,
+              children: [] as CategoryWithPostCount[],
+            };
+          } catch {
+            return {
+              ...cat,
+              postCount: 0,
+              children: [] as CategoryWithPostCount[],
+            };
+          }
+        })
+      );
+      return buildTree(withCounts);
+    },
+  });
 
   const handlePress = (categoryId: number, categoryName: string) => {
     navigation.navigate('CategoryPosts', { categoryId, categoryName });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />

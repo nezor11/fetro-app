@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import VetsicsCard from '../components/VetsicsCard';
 import {
   getVetsicsRaces,
@@ -16,6 +17,7 @@ import {
   VetsicsRace,
 } from '../services/vetsics';
 import { useAuth } from '../context/AuthContext';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
@@ -30,33 +32,18 @@ interface Section {
 export default function VetsicsScreen() {
   const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
-  const [races, setRaces] = useState<VetsicsRace[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!cookie) return;
-    try {
-      setError(null);
-      const data = await getVetsicsRaces(cookie);
-      setRaces(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar carreras');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [cookie]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
+  const {
+    data: races = [],
+    isLoading,
+    isRefetching,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.vetsics(cookie),
+    queryFn: () => getVetsicsRaces(cookie!),
+    enabled: !!cookie,
+  });
 
   const sections = useMemo<Section[]>(() => {
     const { future, past } = categorizeRaces(races);
@@ -70,7 +57,7 @@ export default function VetsicsScreen() {
     return out;
   }, [races]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -82,7 +69,9 @@ export default function VetsicsScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorTitle}>No se pudieron cargar las carreras</Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>
+          {(error as Error).message || 'Error desconocido'}
+        </Text>
       </View>
     );
   }
@@ -114,8 +103,8 @@ export default function VetsicsScreen() {
       contentContainerStyle={{ paddingVertical: SPACING.sm }}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
+          refreshing={isRefetching}
+          onRefresh={refetch}
           colors={[COLORS.primary]}
           tintColor={COLORS.primary}
         />

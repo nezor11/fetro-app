@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import TrainingCard from '../components/TrainingCard';
-import { getTrainings, Training } from '../services/trainings';
+import { getTrainings } from '../services/trainings';
 import { useAuth } from '../context/AuthContext';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
@@ -20,35 +22,20 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function TrainingsScreen() {
   const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
-  const [trainings, setTrainings] = useState<Training[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!cookie) return;
-    try {
-      setError(null);
-      const data = await getTrainings(cookie);
-      setTrainings(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar formaciones');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [cookie]);
+  const {
+    data: trainings = [],
+    isLoading,
+    isRefetching,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.trainings(cookie),
+    queryFn: () => getTrainings(cookie!),
+    enabled: !!cookie,
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -60,7 +47,9 @@ export default function TrainingsScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorTitle}>No se pudieron cargar las formaciones</Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>
+          {(error as Error).message || 'Error desconocido'}
+        </Text>
       </View>
     );
   }
@@ -80,8 +69,8 @@ export default function TrainingsScreen() {
       contentContainerStyle={{ paddingVertical: SPACING.sm }}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
+          refreshing={isRefetching}
+          onRefresh={refetch}
           colors={[COLORS.primary]}
           tintColor={COLORS.primary}
         />

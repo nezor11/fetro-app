@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
 import SolicitudCard from '../components/SolicitudCard';
 import {
   getSolicitudes,
@@ -16,48 +17,37 @@ import {
   isSolicitudVigente,
 } from '../services/solicitudes';
 import { useAuth } from '../context/AuthContext';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 /**
- * Listado de solicitudes vigentes (y al final, las finalizadas atenuadas).
- * No hay agrupación por línea de negocio como en Consultas: el volumen es
- * bajo (típicamente <10 promociones activas a la vez) y el filtro por
- * línea de negocio ya se vende visualmente vía los chips.
+ * Listado de solicitudes. Usa TanStack Query para cache (5 min stale
+ * time por defecto en el client) y pull-to-refresh vía `refetch()`.
+ *
+ * Las vigentes van primero y las finalizadas al final. El orden dentro
+ * de cada bloque respeta el que vino del backend (cronológico inverso).
  */
 export default function SolicitudesScreen() {
   const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
-  const [list, setList] = useState<Solicitud[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!cookie) return;
-    try {
-      setError(null);
-      const data = await getSolicitudes(cookie);
-      setList(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar solicitudes');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [cookie]);
+  const {
+    data: list = [],
+    isLoading,
+    isRefetching,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.solicitudes(cookie),
+    queryFn: () => getSolicitudes(cookie!),
+    // Solo arranca cuando tenemos cookie. Evita una petición con
+    // `cookie=null` antes de que el AuthContext termine de hidratar.
+    enabled: !!cookie,
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  /**
-   * Colocamos las vigentes primero y las finalizadas al final, para que
-   * el usuario encuentre antes lo accionable. Dentro de cada bloque se
-   * preserva el orden del backend (suele ser cronológico inverso).
-   */
   const sorted = useMemo(() => {
     const vigentes: Solicitud[] = [];
     const finalizadas: Solicitud[] = [];
@@ -67,7 +57,7 @@ export default function SolicitudesScreen() {
     return [...vigentes, ...finalizadas];
   }, [list]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -81,7 +71,9 @@ export default function SolicitudesScreen() {
         <Text style={styles.errorTitle}>
           No se pudieron cargar las solicitudes
         </Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>
+          {(error as Error).message || 'Error desconocido'}
+        </Text>
       </View>
     );
   }
@@ -103,11 +95,8 @@ export default function SolicitudesScreen() {
       contentContainerStyle={{ paddingVertical: SPACING.sm }}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            load();
-          }}
+          refreshing={isRefetching}
+          onRefresh={refetch}
           colors={[COLORS.primary]}
           tintColor={COLORS.primary}
         />
