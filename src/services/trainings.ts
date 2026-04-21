@@ -18,7 +18,7 @@ const BASE_URL =
 /**
  * Entrada del array `meta` de una formación.
  * WordPress devuelve pares tag/value planos. Algunos valores vienen
- * JSON-encoded (user_especie, modalidades, tipo_de_formacion, linea_negocio_app).
+ * JSON-encoded (user_especie, modalidades, tipo_de_formacion, linea_negocio).
  */
 export interface TrainingMeta {
   tag: string;
@@ -72,7 +72,7 @@ export function getMetaValue(
 
 /**
  * Parsea un valor meta que llega como JSON string array.
- * Campos conocidos: user_especie, modalidades, tipo_de_formacion, linea_negocio_app, interes, category.
+ * Campos conocidos: user_especie, modalidades, tipo_de_formacion, linea_negocio, interes, category.
  */
 export function getMetaArray(
   meta: TrainingMeta[] | undefined,

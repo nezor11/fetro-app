@@ -11,9 +11,14 @@ export type RootStackParamList = {
   ConsultaDetail: { groupKey: string; slug: string };
 };
 
-// TODO: con Consultas ya vamos 8 tabs. Cuando añadamos Solicitudes (la 9ª)
-// hay que refactorizar estas pestañas hacia un hub "Más" para evitar apretar
-// el bottom tab bar.
+/**
+ * El bottom tab bar solo muestra cinco tabs: Home, Categories, Products,
+ * More y Profile. Trainings, Vetsics, Consultas y Search siguen siendo
+ * rutas de pestaña registradas (para que `navigation.navigate('Vetsics')`
+ * desde cualquier parte siga funcionando y se conserve el estado de
+ * scroll/listado), pero su botón está oculto vía `tabBarButton: () => null`
+ * en `BottomTabs.tsx` y solo se llega a ellas desde `MoreScreen`.
+ */
 export type BottomTabParamList = {
   Home: undefined;
   Categories: undefined;
@@ -22,5 +27,6 @@ export type BottomTabParamList = {
   Vetsics: undefined;
   Consultas: undefined;
   Search: undefined;
+  More: undefined;
   Profile: undefined;
 };

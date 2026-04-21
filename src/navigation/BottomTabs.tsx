@@ -9,10 +9,26 @@ import ProfileScreen from '../screens/ProfileScreen';
 import TrainingsScreen from '../screens/TrainingsScreen';
 import VetsicsScreen from '../screens/VetsicsScreen';
 import ConsultasScreen from '../screens/ConsultasScreen';
+import MoreScreen from '../screens/MoreScreen';
 import { BottomTabParamList } from './types';
 import { COLORS } from '../constants/theme';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
+
+/**
+ * Las únicas tabs que se muestran en el bottom bar. El resto (Trainings,
+ * Vetsics, Consultas, Search) siguen registradas como Tab.Screen para que
+ * `navigation.navigate('Vetsics')` siga funcionando desde cualquier sitio,
+ * pero su botón se oculta con `tabBarButton: () => null`. Se llega a ellas
+ * vía el hub "Más" (MoreScreen).
+ */
+const VISIBLE_TABS: ReadonlyArray<keyof BottomTabParamList> = [
+  'Home',
+  'Categories',
+  'Products',
+  'More',
+  'Profile',
+];
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
@@ -23,6 +39,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Vetsics: '🏃',
     Consultas: '👨‍⚕️',
     Search: '🔍',
+    More: '⋯',
     Profile: '👤',
   };
   return (
@@ -43,6 +60,13 @@ export default function BottomTabs() {
         tabBarIcon: ({ focused }) => (
           <TabIcon label={route.name} focused={focused} />
         ),
+        // Oculta del bar las tabs que solo se alcanzan desde "Más" sin
+        // desmontar la ruta (el estado de cada pantalla se preserva).
+        tabBarButton: VISIBLE_TABS.includes(
+          route.name as keyof BottomTabParamList
+        )
+          ? undefined
+          : () => null,
       })}
     >
       <Tab.Screen
@@ -79,6 +103,11 @@ export default function BottomTabs() {
         name="Search"
         component={SearchScreen}
         options={{ title: 'Buscar' }}
+      />
+      <Tab.Screen
+        name="More"
+        component={MoreScreen}
+        options={{ title: 'Más' }}
       />
       <Tab.Screen
         name="Profile"

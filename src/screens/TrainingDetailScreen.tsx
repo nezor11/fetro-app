@@ -106,7 +106,7 @@ export default function TrainingDetailScreen() {
   const courseDate = getMetaValue(training.meta, 'course_date');
   const modalidades = getMetaArray(training.meta, 'modalidades');
   const especies = getMetaArray(training.meta, 'user_especie');
-  const lineas = getMetaArray(training.meta, 'linea_negocio_app');
+  const lineas = getMetaArray(training.meta, 'linea_negocio');
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: SPACING.xl }}>
