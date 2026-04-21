@@ -9,6 +9,7 @@ import TrainingDetailScreen from '../screens/TrainingDetailScreen';
 import VetsicsDetailScreen from '../screens/VetsicsDetailScreen';
 import ConsultaDetailScreen from '../screens/ConsultaDetailScreen';
 import SolicitudDetailScreen from '../screens/SolicitudDetailScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -77,6 +78,11 @@ export default function RootNavigator() {
             name="SolicitudDetail"
             component={SolicitudDetailScreen}
             options={{ title: 'Solicitud' }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{ title: 'Editar perfil' }}
           />
         </>
       ) : (

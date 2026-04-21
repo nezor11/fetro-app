@@ -1209,3 +1209,150 @@ Es un parche. Lo correcto es que el backend corrija el pipeline de import de ema
 - **Los emails son HTML basura**. Cualquier template sacado de Mailchimp/Brevo/similar va a traer tracking pixels, `font-size: 0`, tablas anidadas y caracteres zero-width. Da por hecho que vas a necesitar un sanitizador.
 - **Escribe el sanitizador como función pura y testéalo con data real**. No en la pantalla. Un Node script de tres líneas que lea el JSON de producción y mida el "antes/después" ahorra horas de ciclos con Expo y te permite iterar regex sin recargar la app.
 - **Regex backreferences (`\\1`) para tags anidados**. El patrón `<(tag)[^>]*>...</\1>` asume que el cierre es el mismo tag del apertura — suficiente en la mayoría de casos si los ejecutas en bucle hasta que no cambie el output. Para HTML complejo de verdad, un parser (ej. `htmlparser2`) es más robusto.
+
+---
+
+## 22. Perfil editable: leer y escribir `wp_usermeta`
+
+### El contexto
+
+Hasta ahora el perfil era **read-only**: mostraba lo que venía en el `user` del login y punto. Para que la app sea realmente útil el profesional tiene que poder:
+
+- Actualizar su nombre/apellidos
+- Mantener sus datos de contacto (teléfono, dirección, clínica)
+- Añadir una descripción corta de su perfil profesional
+
+Estos mismos datos se usan más tarde para **pre-rellenar los formularios** de Solicitudes y Consultas en el web (los `[text* sm-name default:user_first_name]` de Contact Form 7 leen directamente de `wp_usermeta`), así que mantener un perfil al día no es cosmético, ahorra tiempo real al usuario.
+
+### Los endpoints del plugin
+
+Juan Luis expone **tres** endpoints de escritura en `json-api-user`:
+
+| Endpoint | Qué hace | Cuándo lo usamos |
+|---|---|---|
+| `update_user_meta?meta_key=X&meta_value=Y` | Actualiza un campo. **Casos especiales**: `meta_key=name` dispara `wp_update_user(first_name)`, `meta_key=surname` dispara `wp_update_user(last_name)` | Para `first_name`/`last_name` (necesita `wp_update_user` para que WP actualice `display_name`) |
+| `update_user_meta_vars?field1=val1&field2=val2` | Itera `$_REQUEST` y hace un `update_user_meta` por cada clave (excepto `cookie`) | Para todos los campos custom en una sola petición |
+| `delete_user_meta?meta_key=X&meta_value=Y` | Borra un meta | No lo usamos de momento — vaciar un campo es suficiente |
+
+### La estrategia de escritura
+
+Guardar el formulario entero son **dos peticiones** HTTP:
+
+```typescript
+// 1. Todos los campos meta custom en una llamada.
+const metaVars = new URLSearchParams();
+metaVars.append('cookie', cookie);
+metaVars.append('last_name2', profile.lastName2);
+metaVars.append('phone', profile.phone);
+metaVars.append('company', profile.company);
+metaVars.append('direccion', profile.direccion);
+metaVars.append('cp', profile.cp);
+metaVars.append('city', profile.city);
+metaVars.append('description', profile.description);
+await axios.post('/api/user/update_user_meta_vars/', metaVars.toString(), { ... });
+
+// 2. Nombre y primer apellido uno a uno, con el "truco" name/surname
+//    para que dispare wp_update_user y actualice display_name.
+await updateSingleMeta(cookie, 'name', profile.firstName);
+await updateSingleMeta(cookie, 'surname', profile.lastName);
+```
+
+Se podría optimizar enviando solo los campos que han cambiado, pero para 9 campos es **premature optimization**: el servidor lo absorbe en sub-segundo.
+
+### El truco de `URLSearchParams` para caracteres especiales
+
+Un bug sutil: si el usuario escribe el teléfono como `+34 666 123 456`, el `+` se interpreta como espacio en `application/x-www-form-urlencoded` (así está en el RFC desde hace décadas). Si haces la petición mano-a-mano con `?phone=+34666...`, el backend recibirá `34666...` (el espacio se consume y desaparece).
+
+Solución: **usar `URLSearchParams.append()`** en lugar de concatenar strings. Internamente codifica `+` como `%2B`, `&` como `%26`, etc. Y es cross-platform nativo (no depende de `qs` u otro paquete).
+
+```typescript
+// Mal: el + se pierde
+const body = `cookie=${cookie}&phone=${phone}`;
+
+// Bien: URLSearchParams encodea correctamente
+const body = new URLSearchParams();
+body.append('cookie', cookie);
+body.append('phone', phone);
+// body.toString() === "cookie=...&phone=%2B34666123456"
+```
+
+### El patrón `useFocusEffect` para refrescar al volver
+
+Tras editar el perfil, el usuario vuelve a `ProfileScreen`. Si guardas el perfil solo en el estado local de `EditProfileScreen`, `ProfileScreen` no se entera del cambio y sigue mostrando lo viejo.
+
+Tres opciones:
+1. **Meter el perfil en `AuthContext`** y exponer un `refreshProfile()` global. Correcto pero invasivo.
+2. **Pasar un callback de refresco por navigation params**. Acopla pantallas.
+3. **`useFocusEffect` en `ProfileScreen`** que dispara `getProfile()` cada vez que la pantalla gana el foco. Idiomático en React Navigation.
+
+Elegimos **3**. El hook se ejecuta en montaje inicial y también cada vez que navegas de vuelta (con `goBack()` o deep link):
+
+```tsx
+import { useFocusEffect } from '@react-navigation/native';
+
+useFocusEffect(
+  useCallback(() => {
+    load();
+  }, [load])
+);
+```
+
+Coste: una petición GET extra al volver al perfil. A cambio, cero estado compartido y cada pantalla es autónoma.
+
+### Formulario con `TextInput` declarativo
+
+El formulario usa un array de `Field` en lugar de picar 9 `<TextInput>` a mano:
+
+```tsx
+interface Field {
+  key: keyof UserProfile;
+  label: string;
+  placeholder: string;
+  keyboardType?: 'default' | 'phone-pad' | 'numeric';
+  autoCapitalize?: 'none' | 'sentences' | 'words';
+  autoComplete?: 'tel' | 'postal-code' | 'street-address';
+  multiline?: boolean;
+  maxLength?: number;
+}
+
+const FIELDS: Field[] = [
+  { key: 'firstName', label: 'Nombre', placeholder: 'Tu nombre', autoCapitalize: 'words', autoComplete: 'given-name' },
+  { key: 'phone', label: 'Teléfono', placeholder: '+34 600 000 000', keyboardType: 'phone-pad', autoComplete: 'tel' },
+  // ...
+];
+
+{FIELDS.map((field) => (
+  <TextInput
+    key={field.key}
+    value={profile[field.key]}
+    onChangeText={(value) => updateField(field.key, value)}
+    keyboardType={field.keyboardType ?? 'default'}
+    autoCapitalize={field.autoCapitalize ?? 'sentences'}
+    autoComplete={field.autoComplete}
+    // ...
+  />
+))}
+```
+
+Pros: añadir un campo nuevo es una línea en el array. Testear validaciones se hace en un solo sitio. Los atributos `autoComplete` activan el autofill del sistema (Android rellena direcciones de Google, iOS rellena del Keychain), dando UX de app de gama alta sin código extra.
+
+### Validaciones: pocas y útiles
+
+Solo validamos dos cosas antes de hacer el POST:
+
+1. **Nombre no vacío** (`profile.firstName.trim()`).
+2. **CP de 5 dígitos** (`/^\d{5}$/`) si el usuario lo rellenó.
+
+El resto lo decide el backend. La regla aquí es:
+
+> **No impongas reglas que el usuario no conoce.** Si el backend acepta una dirección con números romanos, deja que lo intente.
+
+Validación agresiva en cliente = formularios frustrantes. Validación en servidor = error claro = el usuario corrige y avanza.
+
+### Lecciones aprendidas
+
+- **Dos endpoints de escritura, dos semánticas distintas**. `update_user_meta` para los casos con lógica especial (`wp_update_user`) y `update_user_meta_vars` para "lista de campos planos". No mezclar.
+- **`URLSearchParams` siempre** para bodies `x-www-form-urlencoded`. Nunca concatenes manualmente — los `+`, `&`, espacios en strings te van a morder.
+- **`useFocusEffect` > estado global** para pantallas hermanas con el mismo dato. Si la inversión en Context/React Query no está justificada todavía, un simple fetch on focus es idiomático y no añade dependencia.
+- **Bug de seguridad del plugin**: `update_user_meta_vars` itera `$_REQUEST` sin filtrar, así que WooCommerce inyecta sus propias nonces al request y acaban como meta del usuario. No es crítico (solo afecta a tu propio user), pero conviene que el backend filtre a una whitelist de campos esperados. Está comentado a Juan Luis.
+- **Sanitize del teléfono**: WP elimina el `+` del teléfono si el sanitize es `sanitize_text_field`. En nuestro flujo llega bien al backend (URLSearchParams encodea correctamente), pero el backend lo despoja. Si el negocio lo necesita conservar, hay que parchear el backend con un sanitize específico para teléfonos.

@@ -10,6 +10,7 @@ export type RootStackParamList = {
   VetsicsDetail: { raceId: string };
   ConsultaDetail: { groupKey: string; slug: string };
   SolicitudDetail: { solicitudId: string };
+  EditProfile: undefined;
 };
 
 /**

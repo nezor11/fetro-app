@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,62 @@ import {
   StyleSheet,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
+import {
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { getProfile, UserProfile } from '../services/profile';
+import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+/**
+ * Pantalla de perfil. Muestra los datos del usuario y permite navegar a
+ * `EditProfile` para modificarlos. Refresca `useFocusEffect` al volver
+ * de la edición, así el usuario ve los cambios inmediatamente sin
+ * necesidad de un `refreshUser` global en el AuthContext.
+ */
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const navigation = useNavigation<Nav>();
+  const { user, cookie, logout } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!cookie) return;
+    try {
+      const data = await getProfile(cookie);
+      setProfile(data);
+    } catch {
+      // Si falla la carga del perfil extendido seguimos mostrando lo
+      // básico del `user` del login (sin petar la pantalla).
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [cookie]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   if (!user) return null;
+
+  // Nombre completo, preferimos los del perfil extendido si ya cargó.
+  const firstName = profile?.firstName || user.firstname || '';
+  const lastName = [profile?.lastName, profile?.lastName2]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || user.lastname || '';
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(' ') || user.displayname;
 
   return (
     <ScrollView style={styles.container}>
@@ -23,23 +71,66 @@ export default function ProfileScreen() {
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarText}>
-              {(user.firstname || user.displayname || '?')[0].toUpperCase()}
+              {(firstName || user.displayname || '?')[0].toUpperCase()}
             </Text>
           </View>
         )}
-        <Text style={styles.name}>{user.displayname}</Text>
+        <Text style={styles.name}>{fullName}</Text>
         <Text style={styles.email}>{user.email}</Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Información</Text>
-        <InfoRow label="Nombre" value={user.firstname} />
-        <InfoRow label="Apellidos" value={user.lastname} />
-        <InfoRow label="Email" value={user.email} />
-        <InfoRow label="Usuario" value={user.username} />
-      </View>
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() => navigation.navigate('EditProfile')}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.editButtonText}>✏️ Editar perfil</Text>
+      </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.8}>
+      {loading ? (
+        <View style={styles.loadingBlock}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      ) : (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cuenta</Text>
+            <InfoRow label="Nombre" value={firstName} />
+            <InfoRow label="Apellidos" value={lastName} />
+            <InfoRow label="Email" value={user.email} />
+            <InfoRow label="Usuario" value={user.username} />
+          </View>
+
+          {profile &&
+          (profile.phone ||
+            profile.company ||
+            profile.direccion ||
+            profile.cp ||
+            profile.city) ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Contacto profesional</Text>
+              <InfoRow label="Clínica/Empresa" value={profile.company} />
+              <InfoRow label="Teléfono" value={profile.phone} />
+              <InfoRow label="Dirección" value={profile.direccion} />
+              <InfoRow label="Código postal" value={profile.cp} />
+              <InfoRow label="Provincia" value={profile.city} />
+            </View>
+          ) : null}
+
+          {profile?.description ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Sobre ti</Text>
+              <Text style={styles.description}>{profile.description}</Text>
+            </View>
+          ) : null}
+        </>
+      )}
+
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={logout}
+        activeOpacity={0.8}
+      >
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -51,7 +142,9 @@ function InfoRow({ label, value }: { label: string; value?: string }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+      <Text style={styles.infoValue} numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -100,6 +193,25 @@ const styles = StyleSheet.create({
     color: COLORS.white + 'CC',
     marginTop: SPACING.xs,
   },
+  editButton: {
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.white,
+    paddingVertical: SPACING.sm + 4,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+  },
+  editButtonText: {
+    color: COLORS.primary,
+    fontSize: FONTS.regular,
+    fontWeight: '700',
+  },
+  loadingBlock: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
   section: {
     backgroundColor: COLORS.white,
     marginTop: SPACING.md,
@@ -118,18 +230,28 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: SPACING.sm + 2,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    gap: SPACING.sm,
   },
   infoLabel: {
     fontSize: FONTS.regular,
     color: COLORS.textLight,
+    flexShrink: 0,
   },
   infoValue: {
     fontSize: FONTS.regular,
     color: COLORS.text,
     fontWeight: '500',
+    flex: 1,
+    textAlign: 'right',
+  },
+  description: {
+    fontSize: FONTS.regular,
+    color: COLORS.text,
+    lineHeight: 22,
   },
   logoutButton: {
     backgroundColor: COLORS.error,
