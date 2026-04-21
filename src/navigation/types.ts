@@ -9,6 +9,7 @@ export type RootStackParamList = {
   TrainingDetail: { trainingId: string };
   VetsicsDetail: { raceId: string };
   ConsultaDetail: { groupKey: string; slug: string };
+  SolicitudDetail: { solicitudId: string };
 };
 
 /**
@@ -26,6 +27,7 @@ export type BottomTabParamList = {
   Trainings: undefined;
   Vetsics: undefined;
   Consultas: undefined;
+  Solicitudes: undefined;
   Search: undefined;
   More: undefined;
   Profile: undefined;

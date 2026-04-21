@@ -970,3 +970,242 @@ Cuando añadamos **Solicitudes** (la 9ª, próxima feature) toca refactorizar a 
 - **Un endpoint "inexistente" se distingue de uno "existente con credenciales malas" por el `Content-Type`**. `application/json` = endpoint válido (te devuelve un JSON de error). `text/html` = endpoint inexistente (te devuelve la página de error de WordPress).
 - **No meter lógica de UI en la pantalla**. El mapeo de emoji por categoría y el orden de los grupos viven en el servicio, que es reusable desde card + detail + (mañana) tab icon.
 - **Cuando falte un endpoint, usa placeholders útiles**. `mailto:` pre-rellenado no es una solución definitiva, pero permite que la feature se libere ya y que el negocio valide el flujo de contacto real con usuarios reales. Documenta claramente el TODO para que el siguiente dev sepa qué sustituir.
+
+---
+
+## 20. Hub "Más": refactor del bottom tab bar
+
+### El contexto
+
+Llegamos a tener **8 pestañas** en el bottom tab bar (Home, Categorías, Productos, Formación, VetSICS, Consultas, Buscar, Perfil). En iPhones pequeños y Androids de gama baja las etiquetas se cortaban y los botones eran incómodos de acertar. Con **Solicitudes** sumando la 9ª pestaña era imposible seguir así.
+
+**Regla empírica**: más de 5 pestañas en un bottom tab bar es mala idea. Material Design y Human Interface Guidelines lo dicen desde hace años, pero es fácil ignorarlo a medida que añades features.
+
+### La solución
+
+Introducimos un hub **"Más"** (una tab más, irónicamente) que agrupa las pantallas secundarias en una rejilla visual. El tab bar queda con **5 tabs visibles**:
+
+| Tab | Emoji | Pantalla |
+|---|---|---|
+| Noticias | 🏠 | `HomeScreen` |
+| Categorías | 📂 | `CategoriesScreen` |
+| Productos | 💊 | `ProductsScreen` |
+| Más | ⋯ | `MoreScreen` |
+| Perfil | 👤 | `ProfileScreen` |
+
+Y dentro de "Más" vive una rejilla 2×N de tiles con: Formación, VetSICS, Consultas, Solicitudes, Buscar.
+
+### Dos formas de esconder tabs en React Navigation
+
+Para mover una pantalla "fuera" del tab bar sin perderla como ruta hay dos opciones:
+
+**Opción A — Sacarla del `Tab.Navigator` a un stack anidado**:
+- Pros: limpio arquitectónicamente, cada pantalla decide su propia navegación.
+- Contras: **rompe toda llamada a `navigation.navigate('Vetsics')` desde cualquier sitio** (la ruta ya no vive en el mismo navigator). Pierdes persistencia de estado entre tabs. Mucho refactor.
+
+**Opción B — Mantenerla como `Tab.Screen` pero ocultar el botón**:
+- Pros: cero regresión. Los `navigation.navigate('Vetsics')` existentes siguen funcionando. El estado de cada pantalla se conserva al saltar entre ellas.
+- Contras: aparenta ser hack (lo es, pero es el hack "oficial" soportado por React Navigation).
+
+Elegimos **B** y se implementa con `tabBarButton: () => null`:
+
+```tsx
+const VISIBLE_TABS: ReadonlyArray<keyof BottomTabParamList> = [
+  'Home',
+  'Categories',
+  'Products',
+  'More',
+  'Profile',
+];
+
+<Tab.Navigator
+  screenOptions={({ route }) => ({
+    // ...otros options
+    tabBarButton: VISIBLE_TABS.includes(route.name)
+      ? undefined
+      : () => null,
+  })}
+>
+  {/* Todas las Tab.Screen registradas como siempre */}
+</Tab.Navigator>
+```
+
+### El MoreScreen
+
+Array de tiles declarativo + renderizado trivial:
+
+```tsx
+interface Tile {
+  route: keyof BottomTabParamList;
+  emoji: string;
+  title: string;
+  subtitle: string;
+}
+
+const TILES: Tile[] = [
+  { route: 'Trainings', emoji: '📚', title: 'Formación', subtitle: '...' },
+  { route: 'Vetsics', emoji: '🏃', title: 'VetSICS', subtitle: '...' },
+  // ...
+];
+
+<View style={styles.grid}>
+  {TILES.map((tile) => (
+    <TouchableOpacity
+      key={tile.route}
+      onPress={() => navigation.navigate(tile.route as never)}
+    >
+      <Text>{tile.emoji}</Text>
+      <Text>{tile.title}</Text>
+      <Text>{tile.subtitle}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
+```
+
+Rejilla de 2 columnas con `flexBasis: '48%'`. Añadir un tile nuevo cuando venga la próxima feature es una línea en el array.
+
+### Lecciones aprendidas
+
+- **Piensa el tab bar desde el día 1**. Añadir tabs sin límite funciona hasta que no funciona. El hub "Más" debería haber existido desde la 5ª feature, no la 9ª.
+- **`tabBarButton: () => null` es el hack oficial** para esconder rutas del tab bar sin sacarlas del navigator. Está documentado en React Navigation y es idiomático.
+- **No busques simetría en el tab bar**. Cinco tabs desiguales (unas visitadas mucho, otras poco) son mejores que ocho iguales. El de "Más" cabe perfectamente como catch-all.
+
+---
+
+## 21. Solicitudes: promociones con formulario web
+
+### El contexto
+
+Fatro ofrece a los profesionales veterinarios acceso a merchandising (carteles, alfombrillas), muestras de producto y sorteos/becas. Cada promoción tiene un formulario Contact Form 7 asociado que recoge datos del usuario (los pre-rellena desde su perfil) y dispara un email a Fatro con la petición.
+
+El endpoint del plugin que lo expone es `/api/user/get_solicitudes/`.
+
+### Estructura del response
+
+Cada solicitud es un post del CPT `solicitudes`. Los campos útiles son:
+
+```typescript
+interface Solicitud {
+  ID: string;
+  post_title: string;        // "Solicitud Alfombrilla Porcino 2026"
+  post_name: string;         // slug
+  guid: string;              // URL completa del post en WP (útil para Linking)
+  thumb_url: string | null;
+  app_img: string | null;    // imagen que usamos para hero + card
+  custom_form_id: number;    // ID del CF7 asociado
+  custom_form_value: string; // MARKUP del CF7 (shortcodes + HTML + JS)
+  meta: SolicitudMeta[];
+}
+```
+
+En el array `meta` vienen:
+
+- `date_promo` → string `YYYYMMDD` (ej. `"20251214"`). Lo parseamos con regex.
+- `linea_negocio` → JSON array `'["ANICO","GANADERIA"]'` (post-refactor de `enrich_post_metadata`).
+- `user_especie`, `category` → también JSON arrays.
+- `more_info` → HTML largo de email marketing (ver sección del bug abajo).
+- `no_requiere_direccion` → `"0"` o `"1"`.
+
+### Por qué no renderizamos el formulario nativamente
+
+El `custom_form_value` es un shortcode Contact Form 7 con decenas de campos, pre-fill desde meta de usuario (`default:usermeta_phone`), validaciones, política de privacidad, JavaScript embebido, layout HTML… Ejemplo real:
+
+```
+[dynamichidden your-subject]
+[dynamichidden form_title]
+[text* sm-name default:user_first_name]
+[tel* sm-phone default:usermeta_phone]
+[countrytext* sm-country default:usermeta_country "España"]
+[acceptance sm-optin] He leído y acepto las condiciones...
+[submit "Lo quiero"]
+```
+
+Replicarlo en React Native sería:
+
+1. **Frágil**: el equipo de backend sigue iterando estos forms (Juan Luis commiteó "fix(cf7): map user metadata to sm- tags for specialist consultation email" tres veces en una semana). Cada refactor rompería la app nativa.
+2. **Mucho trabajo**: escribir un parser de CF7, mapear `usermeta_*` a nuestros estados, validar `[acceptance]`, manejar `[countrytext]` con autocomplete de provincias…
+
+**Decisión pragmática**: hacemos handoff al navegador. Tocar "Rellenar solicitud" abre el `guid` del post con `Linking.openURL()`. El usuario ve el formulario web de WP, ya pre-rellenado si tiene sesión activa.
+
+```tsx
+const handleSolicitar = () => {
+  if (Platform.OS === 'web') {
+    window.open(solicitud.guid, '_blank');
+    return;
+  }
+  Alert.alert('Rellenar solicitud', '...', [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Abrir formulario', onPress: () => Linking.openURL(solicitud.guid) },
+  ]);
+};
+```
+
+Cuando el backend exponga un endpoint `submit_solicitud` o cuando un producto futuro justifique el esfuerzo, migramos a un formulario nativo. Por ahora el MVP está en la calle y los usuarios pueden solicitar.
+
+### El bug de los "nnnnn" en `more_info`
+
+El campo `more_info` viene del backend con plantillas de email marketing (tipo Mailchimp/Brevo) importadas a WordPress. Tras el import, el HTML tiene tres problemas crónicos que hacen que la pantalla parezca un desastre visual:
+
+1. **Letras `n` sueltas** entre tags y al principio del string. Raw:
+   ```
+   "n\r\nn\r\n\r\n<center class=\"wrapper\">...</center>\r\nn\r\n\r\nnnnnnn\r\n<table>..."
+   ```
+   Son claros artefactos de un `str_replace('\\n', "\n", ...)` o similar donde los `\n` literales perdieron el backslash y quedaron como letra `n`.
+
+2. **Spans invisibles** con `font-size: 0`, `visibility: hidden` o `display: none` llenos de caracteres zero-width (`\u200C`, `\u200B`). Son padding invisible de email tracking.
+
+3. **Líneas CRLF** (`\r\n`) en vez de LF.
+
+`react-native-render-html` lo procesa tal cual y pinta todas esas `n` literales como texto, además de ocupar memoria renderizando los spans invisibles.
+
+### El sanitizador (parche temporal)
+
+Función en `services/solicitudes.ts` que se aplica antes de pasar el HTML a `RenderHtml`:
+
+```typescript
+export function sanitizeSolicitudHtml(html: string): string {
+  if (!html) return '';
+  let cleaned = html;
+
+  // 1. Normaliza CRLF a LF.
+  cleaned = cleaned.replace(/\r\n/g, '\n');
+
+  // 2. Elimina caracteres zero-width invisibles.
+  cleaned = cleaned.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
+
+  // 3. Elimina elementos con font-size:0, display:none, visibility:hidden
+  //    iterativamente (pueden estar anidados).
+  const hiddenRegex = /<(span|div|td|tr|table|p)[^>]*style="[^"]*(?:font-size:\s*0|display:\s*none|visibility:\s*hidden)[^"]*"[^>]*>[\s\S]*?<\/\1>/gi;
+  let prev = '';
+  while (prev !== cleaned) {
+    prev = cleaned;
+    cleaned = cleaned.replace(hiddenRegex, '');
+  }
+
+  // 4. Elimina nodos de texto que son solo letras `n` (con espacios
+  //    y/o &nbsp; alrededor, entre tags).
+  const nSpace = '(?:\\s|&nbsp;)*';
+  cleaned = cleaned.replace(new RegExp(`>${nSpace}(?:n${nSpace})+<`, 'g'), '><');
+
+  // 5. Quita las `n` al principio/fin del string.
+  cleaned = cleaned.replace(new RegExp(`^${nSpace}(?:n${nSpace})+`, 'i'), '');
+  cleaned = cleaned.replace(new RegExp(`${nSpace}(?:n${nSpace})+$`, 'i'), '');
+
+  // 6. Colapsa newlines múltiples.
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  return cleaned.trim();
+}
+```
+
+Resultado medido: reducción del **69-78%** del HTML en las 5 solicitudes reales que hay en producción. Texto útil intacto ("FINVIRUS ECO es un desinfectante...", listado de principios activos, CTA), ruido invisible fuera.
+
+Es un parche. Lo correcto es que el backend corrija el pipeline de import de email templates. Mientras tanto, la app pinta limpio.
+
+### Lecciones aprendidas
+
+- **Vista previa realista antes de dar por hecho el HTML**. Cuando un campo se llama `more_info` y es HTML, probarlo con data real de producción es obligatorio — no con el "hello world" que devuelve el endpoint recién creado.
+- **Handoff pragmático**. Si un formulario del backend es demasiado dinámico para replicarlo nativamente, `Linking.openURL()` es aceptable como MVP. Documenta el TODO para cuando venga la versión definitiva.
+- **Los emails son HTML basura**. Cualquier template sacado de Mailchimp/Brevo/similar va a traer tracking pixels, `font-size: 0`, tablas anidadas y caracteres zero-width. Da por hecho que vas a necesitar un sanitizador.
+- **Escribe el sanitizador como función pura y testéalo con data real**. No en la pantalla. Un Node script de tres líneas que lea el JSON de producción y mida el "antes/después" ahorra horas de ciclos con Expo y te permite iterar regex sin recargar la app.
+- **Regex backreferences (`\\1`) para tags anidados**. El patrón `<(tag)[^>]*>...</\1>` asume que el cierre es el mismo tag del apertura — suficiente en la mayoría de casos si los ejecutas en bucle hasta que no cambie el output. Para HTML complejo de verdad, un parser (ej. `htmlparser2`) es más robusto.

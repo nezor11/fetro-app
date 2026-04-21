@@ -56,18 +56,17 @@ const TILES: Tile[] = [
     subtitle: 'Directorio de especialistas',
   },
   {
+    route: 'Solicitudes',
+    emoji: '📝',
+    title: 'Solicitudes',
+    subtitle: 'Merchandising, muestras y promociones',
+  },
+  {
     route: 'Search',
     emoji: '🔍',
     title: 'Buscar',
     subtitle: 'Encuentra contenido por palabra clave',
   },
-  // TODO: cuando esté listo el endpoint `get_solicitudes/`, descomentar:
-  // {
-  //   route: 'Solicitudes',
-  //   emoji: '📝',
-  //   title: 'Solicitudes',
-  //   subtitle: 'Pide muestras, material o visita',
-  // },
 ];
 
 export default function MoreScreen() {

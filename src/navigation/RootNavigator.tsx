@@ -8,6 +8,7 @@ import ProductDetailScreen from '../screens/ProductDetailScreen';
 import TrainingDetailScreen from '../screens/TrainingDetailScreen';
 import VetsicsDetailScreen from '../screens/VetsicsDetailScreen';
 import ConsultaDetailScreen from '../screens/ConsultaDetailScreen';
+import SolicitudDetailScreen from '../screens/SolicitudDetailScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -71,6 +72,11 @@ export default function RootNavigator() {
             name="ConsultaDetail"
             component={ConsultaDetailScreen}
             options={{ title: 'Especialista' }}
+          />
+          <Stack.Screen
+            name="SolicitudDetail"
+            component={SolicitudDetailScreen}
+            options={{ title: 'Solicitud' }}
           />
         </>
       ) : (
