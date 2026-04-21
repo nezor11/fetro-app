@@ -90,6 +90,42 @@ export function getMetaArray(
 }
 
 /**
+ * Comprueba si el usuario (por su ID) está inscrito en una formación.
+ *
+ * El backend guarda los IDs de usuarios inscritos en el meta
+ * `usuarios_registrados` como un JSON array de strings (ej.
+ * `["3","15","1213"]`). La app original Android usa este mismo meta
+ * para pintar la pantalla de Asistencias. No hay endpoint dedicado.
+ *
+ * También se consideran inscripciones en sesiones individuales: cada
+ * sesión tiene su propio `sesions_N_usuarios_registrados`. Si el
+ * usuario está en CUALQUIERA de los arrays (padre o sesiones), se
+ * considera inscrito en la formación.
+ */
+export function isUserRegisteredInTraining(
+  training: Training,
+  userId: number | string
+): boolean {
+  if (!training.meta || !userId) return false;
+  const userIdStr = String(userId);
+
+  // Buscamos en todos los meta keys que terminen en `usuarios_registrados`
+  // (incluye el del padre y los `sesions_N_usuarios_registrados`).
+  for (const m of training.meta) {
+    if (!/usuarios_registrados$/.test(m.tag)) continue;
+    try {
+      const parsed = JSON.parse(m.value);
+      if (Array.isArray(parsed) && parsed.map(String).includes(userIdStr)) {
+        return true;
+      }
+    } catch {
+      // Si algún meta no es JSON válido lo ignoramos, no rompe la feature.
+    }
+  }
+  return false;
+}
+
+/**
  * Lista las formaciones agrupadas (padre + sesiones).
  * Requiere cookie válida del usuario autenticado.
  */

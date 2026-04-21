@@ -1785,3 +1785,79 @@ const handlePress = async () => {
 - **Snapshot + fallback a detalle con datos frescos** es un patrón robusto para listados que deben ser instantáneos.
 - **`Animated` nativo sigue siendo suficiente** para micro-interacciones puntuales. `Reanimated` es para animaciones complejas, gestuales o coreografiadas. Elegir según necesidad.
 - **Separación clara service → context → UI** hace que el día de mañana migrar a server-side sea tocar solo el service, sin reescribir UI.
+
+---
+
+## 26. Asistencias: reconciliar scope contra la app Android original
+
+### El contexto
+
+Tras un par de sesiones avanzando al ritmo de "features que parecen útiles", paramos a decompilar los `.dex` de la app Android original (`es.swapp.fatrocomunidad`, ~25 MB de código) para reconciliar el scope. Hallazgos:
+
+- **"Favoritos"** no existe en la original (0 ocurrencias de "favorit" en 12 dex). Lo inventé yo. Decisión del producto: se mantiene porque Jorge lo valida como UX moderna.
+- **"Mis solicitudes"** tampoco existe tal cual. Lo que tiene la original son dos pantallas relacionadas: `AsistenciasFragment` y `RegistrosFragment`.
+- Las **entidades del modelo original** son: `LoginResponse`, `Meta`, `PostalCode`, `QRCode`, `Registro`, `RegistroGroup`, `Solicitud`, `StickerProduct`, `TiposVia`, `User`, `VetSICS`, `Webinar`. No hay `Favorito` ni `Post` ni `Product` (la original no muestra noticias ni productos — nosotros las añadimos).
+- La original usa **8 endpoints** del plugin: `get_vetsics`, `get_solicitudes`, `get_webinars_group`, `get_specilities` (typo), `get_user_meta`, `update_user_meta`, `get_qrcodes`, `get_requsts_forms` (typo).
+
+### La decisión de Asistencias
+
+"Asistencias" en la app original agrupa **carreras VetSICS y formaciones en las que el usuario se inscribió**. Es una vista diferente a "Mis solicitudes" (promociones pedidas). La implementamos como nueva pantalla sin borrar "Mis solicitudes": dos conceptos distintos, dos pantallas.
+
+### La dificultad: no hay `requested` en Webinars
+
+El backend expone `requested` (conteo de submissions en Flamingo) en `get_vetsics` y `get_solicitudes` pero **no en `get_webinars_group`**. Comprobado en vivo:
+
+```bash
+curl .../get_webinars_group/... | jq '.forms[0].requested'
+# => undefined
+```
+
+En su lugar, cada formación trae en su meta un campo `usuarios_registrados` como **JSON array de IDs de usuarios inscritos**:
+
+```json
+{ "tag": "usuarios_registrados", "value": "[\"3\",\"15\",\"1213\",\"14\"]" }
+```
+
+Además, las formaciones pueden tener varias sesiones (`sesions_0_usuarios_registrados`, `sesions_1_usuarios_registrados`…), cada una con su propio array.
+
+### El helper `isUserRegisteredInTraining`
+
+Recorre todos los meta tags que terminen en `usuarios_registrados` (el padre + todas las sesiones) y busca el ID del usuario en cualquiera de los arrays:
+
+```typescript
+export function isUserRegisteredInTraining(
+  training: Training,
+  userId: number | string
+): boolean {
+  if (!training.meta || !userId) return false;
+  const userIdStr = String(userId);
+
+  for (const m of training.meta) {
+    if (!/usuarios_registrados$/.test(m.tag)) continue;
+    try {
+      const parsed = JSON.parse(m.value);
+      if (Array.isArray(parsed) && parsed.map(String).includes(userIdStr)) {
+        return true;
+      }
+    } catch {
+      // Si algún meta no es JSON válido lo ignoramos
+    }
+  }
+  return false;
+}
+```
+
+Vive en `services/trainings.ts` junto a las otras helpers para mantener la lógica de dominio fuera de la pantalla y facilitar tests.
+
+### Cache compartido, beneficio real
+
+Es el segundo caso (tras "Mis solicitudes") en que TanStack Query paga solo la migración anterior. Entrar en Asistencias reutiliza el cache de las queries `queryKeys.vetsics(cookie)` y `queryKeys.trainings(cookie)` si el usuario venía de esas pestañas. Cero fetches redundantes.
+
+En una app sin cache layer tendrías que pasar los datos vía props/context desde la pantalla padre o disparar dos peticiones nuevas. Con TanStack Query la pantalla es autosuficiente sin cargar dos veces.
+
+### Lecciones aprendidas
+
+- **Reconciliar el scope con la referencia real cuando exista**. Dos horas de decompilación dex + grep nos dieron más claridad sobre qué features son necesarias que cuatro sesiones de "lluvia de ideas".
+- **No asumir que todos los endpoints del backend exponen el mismo shape**. `get_vetsics` tiene `requested` top-level; `get_webinars_group` lo esconde en meta con otra estructura. Si hay varios endpoints de "cosas que el usuario solicita", pide al backend un shape uniforme — o si ya están desplegados y no puedes cambiar, escribe helpers que abstraigan las diferencias.
+- **Un helper por tipo de consulta, no un dispatcher gigante**. `isUserRegisteredInTraining` hace UNA cosa. No un `getUserRelation(entity, user)` que decida por `entity.kind` y tenga cinco ramas. Helpers específicos son más fáciles de testear y más rápidos de leer.
+- **Agregación cliente-side de endpoints existentes** es muchas veces más rápida y barata que pedir un endpoint nuevo al backend. "Asistencias" no necesitó ninguna PR al plugin — compone dos respuestas que ya se piden igualmente.

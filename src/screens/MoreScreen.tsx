@@ -68,6 +68,12 @@ const TILES: Tile[] = [
     subtitle: 'Lo que has marcado para volver después',
   },
   {
+    route: 'Asistencias',
+    emoji: '🎟️',
+    title: 'Asistencias',
+    subtitle: 'Carreras y formaciones en las que te inscribiste',
+  },
+  {
     route: 'Search',
     emoji: '🔍',
     title: 'Buscar',

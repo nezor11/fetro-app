@@ -31,6 +31,7 @@ export type BottomTabParamList = {
   Consultas: undefined;
   Solicitudes: undefined;
   Favorites: undefined;
+  Asistencias: undefined;
   Search: undefined;
   More: undefined;
   Profile: undefined;
