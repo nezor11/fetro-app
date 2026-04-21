@@ -15,6 +15,7 @@ import RenderHtml from 'react-native-render-html';
 import { getPost, WPPost } from '../services/posts';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import FavoriteButton from '../components/FavoriteButton';
 
 type PostDetailRoute = RouteProp<RootStackParamList, 'PostDetail'>;
 
@@ -128,6 +129,16 @@ export default function PostDetailScreen() {
             ))}
           </View>
         )}
+        <FavoriteButton
+          data={{
+            kind: 'post',
+            id: String(post.id),
+            title,
+            subtitle: author || categories[0] || undefined,
+            imageUrl,
+          }}
+          style={{ marginVertical: SPACING.md, alignSelf: 'flex-start' }}
+        />
         <RenderHtml
           contentWidth={width - SPACING.md * 2}
           source={{ html: post.content.rendered }}

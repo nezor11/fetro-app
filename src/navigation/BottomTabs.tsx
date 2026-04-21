@@ -10,6 +10,7 @@ import TrainingsScreen from '../screens/TrainingsScreen';
 import VetsicsScreen from '../screens/VetsicsScreen';
 import ConsultasScreen from '../screens/ConsultasScreen';
 import SolicitudesScreen from '../screens/SolicitudesScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 import MoreScreen from '../screens/MoreScreen';
 import { BottomTabParamList } from './types';
 import { COLORS } from '../constants/theme';
@@ -40,6 +41,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Vetsics: '🏃',
     Consultas: '👨‍⚕️',
     Solicitudes: '📝',
+    Favorites: '❤️',
     Search: '🔍',
     More: '⋯',
     Profile: '👤',
@@ -105,6 +107,11 @@ export default function BottomTabs() {
         name="Solicitudes"
         component={SolicitudesScreen}
         options={{ title: 'Solicitudes' }}
+      />
+      <Tab.Screen
+        name="Favorites"
+        component={FavoritesScreen}
+        options={{ title: 'Favoritos' }}
       />
       <Tab.Screen
         name="Search"

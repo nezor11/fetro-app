@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import FavoriteButton from '../components/FavoriteButton';
 
 type ConsultaDetailRoute = RouteProp<RootStackParamList, 'ConsultaDetail'>;
 
@@ -144,6 +145,26 @@ export default function ConsultaDetailScreen() {
           {specialist.specialist_name.trim()}
         </Text>
 
+        <View style={styles.favoriteWrap}>
+          <FavoriteButton
+            data={{
+              kind: 'consulta',
+              // Los especialistas no tienen un `ID` propio; usamos el
+              // `specialist_slug` como identificador único. El `groupKey`
+              // (clave del bucket de especialidades) va en routeParams
+              // porque es necesario para navegar de vuelta al detalle.
+              id: specialist.specialist_slug,
+              routeParams: {
+                groupKey: route.params.groupKey,
+                slug: specialist.specialist_slug,
+              },
+              title: specialist.specialist_name.trim(),
+              subtitle: specialist.speciality,
+              imageUrl: specialist.thumb_url || null,
+            }}
+          />
+        </View>
+
         <View style={styles.chipsRow}>
           <View style={[styles.chip, styles.chipAccent]}>
             <Text style={[styles.chipText, styles.chipTextAccent]}>
@@ -240,6 +261,10 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: SPACING.sm,
     textAlign: 'center',
+  },
+  favoriteWrap: {
+    alignItems: 'center',
+    marginBottom: SPACING.md,
   },
   chipsRow: {
     flexDirection: 'row',

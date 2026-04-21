@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import FavoriteButton from '../components/FavoriteButton';
 
 type TrainingDetailRoute = RouteProp<RootStackParamList, 'TrainingDetail'>;
 
@@ -120,6 +121,17 @@ export default function TrainingDetailScreen() {
             Formador/a: <Text style={styles.formerName}>{former}</Text>
           </Text>
         ) : null}
+
+        <FavoriteButton
+          data={{
+            kind: 'training',
+            id: training.ID,
+            title: decodeHtml(training.post_title),
+            subtitle: former || undefined,
+            imageUrl: image,
+          }}
+          style={{ marginTop: SPACING.sm, marginBottom: SPACING.md, alignSelf: 'flex-start' }}
+        />
 
         <View style={styles.chipsRow}>
           {courseDate ? (

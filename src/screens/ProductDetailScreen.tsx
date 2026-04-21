@@ -15,6 +15,7 @@ import RenderHtml from 'react-native-render-html';
 import { getProduct, WPProduct } from '../services/products';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import FavoriteButton from '../components/FavoriteButton';
 
 type Route = RouteProp<RootStackParamList, 'ProductDetail'>;
 
@@ -117,6 +118,17 @@ export default function ProductDetailScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         {excerpt ? <Text style={styles.excerpt}>{excerpt}</Text> : null}
+
+        <FavoriteButton
+          data={{
+            kind: 'product',
+            id: String(product.id),
+            title,
+            subtitle: productCats[0] || especialidades[0] || undefined,
+            imageUrl,
+          }}
+          style={{ marginTop: SPACING.sm, marginBottom: SPACING.md, alignSelf: 'flex-start' }}
+        />
 
         {productCats.length > 0 && (
           <View style={styles.section}>

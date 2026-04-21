@@ -24,6 +24,7 @@ import {
   sanitizeSolicitudHtml,
   Solicitud,
 } from '../services/solicitudes';
+import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -151,7 +152,20 @@ export default function SolicitudDetailScreen() {
       )}
 
       <View style={styles.content}>
-        <Text style={styles.title}>{decodeHtml(solicitud.post_title)}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{decodeHtml(solicitud.post_title)}</Text>
+        </View>
+
+        <FavoriteButton
+          data={{
+            kind: 'solicitud',
+            id: String(solicitud.ID),
+            title: decodeHtml(solicitud.post_title),
+            subtitle: dateLabel ? `Hasta ${dateLabel}` : undefined,
+            imageUrl: image,
+          }}
+          style={{ marginBottom: SPACING.md, alignSelf: 'flex-start' }}
+        />
 
         <View style={styles.chipsRow}>
           {dateLabel ? (
@@ -277,11 +291,13 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.md,
   },
+  titleRow: {
+    marginBottom: SPACING.sm,
+  },
   title: {
     fontSize: FONTS.title,
     fontWeight: '800',
     color: COLORS.text,
-    marginBottom: SPACING.md,
   },
   chipsRow: {
     flexDirection: 'row',

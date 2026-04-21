@@ -62,6 +62,12 @@ const TILES: Tile[] = [
     subtitle: 'Merchandising, muestras y promociones',
   },
   {
+    route: 'Favorites',
+    emoji: '❤️',
+    title: 'Favoritos',
+    subtitle: 'Lo que has marcado para volver después',
+  },
+  {
     route: 'Search',
     emoji: '🔍',
     title: 'Buscar',

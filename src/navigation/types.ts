@@ -30,6 +30,7 @@ export type BottomTabParamList = {
   Vetsics: undefined;
   Consultas: undefined;
   Solicitudes: undefined;
+  Favorites: undefined;
   Search: undefined;
   More: undefined;
   Profile: undefined;

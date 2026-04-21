@@ -1669,3 +1669,119 @@ Claves del patrón:
 - **Tipos unión discriminada para listas heterogéneas**. Mucho más seguro que un cast `as any` o un `renderItem` con switch-case sobre un campo opcional.
 - **Estado vacío bien diseñado es una feature**. El 90% de los usuarios nuevos verán esta pantalla vacía. Si el copy es útil ("aparecerá aquí cuando rellenes una solicitud") y el diseño no se siente roto, la pantalla cumple su función incluso sin datos.
 - **Mocks en dev: `__DEV__` + borrado antes del commit**. Usar toggles en `false` que se quedan en el código es una fuente conocida de bugs ("¿por qué la pantalla se comporta raro?" → "ah, el mock estaba en true").
+
+---
+
+## 25. Favoritos locales con AsyncStorage
+
+### El contexto
+
+La app original Android (analizada contra los .dex de `es.swapp.fatrocomunidad`) **no tiene** una feature de favoritos: cero ocurrencias de "favorit" en 25 MB de código decompilado. Así que esto es una **adición** al scope original, justificada como mejora de UX propia de apps modernas: permitir marcar carreras, posts, productos, formaciones, especialistas o promociones para volver a ellos rápido.
+
+### Por qué local y no server-side
+
+Dos razones:
+
+1. **Ningún endpoint del plugin `json-api-user`** expone guardado de favoritos del usuario. Hacerlo server-side implicaría PR al plugin + negociación con el equipo de backend.
+2. **No necesitamos sincronización multi-device todavía**. Un usuario veterinario con la app en el móvil y la web no espera que marcar algo en la web aparezca en el móvil (ni tenemos la web tocando favoritos).
+
+Si algún día hace falta sync, basta con:
+- Añadir meta `app_favorites` al perfil WP.
+- Hacer un `update_user_meta?meta_key=app_favorites&meta_value=<json>` cada vez que cambia el array local.
+- Leer ese meta en el login y fusionar con el local.
+
+El diseño actual está preparado para eso (los favoritos son serializables, con un snapshot completo de datos mínimos).
+
+### La arquitectura en tres capas
+
+Para aislar la responsabilidad y que sea fácil migrar al futuro:
+
+```
+FavoriteButton.tsx (UI)
+       ↓ usa
+useFavorites() hook → FavoritesContext.tsx (estado reactivo)
+       ↓ usa
+services/favorites.ts (lógica pura + AsyncStorage)
+```
+
+- **`services/favorites.ts`**: funciones puras (`loadFavorites`, `saveFavorites`, `addToList`, `removeFromList`, `isInList`). Sin hooks, sin React. Testeable como funciones normales.
+- **`FavoritesContext.tsx`**: el Provider monta al arranque, carga de AsyncStorage, y mantiene el array reactivo en memoria. Expone `toggleFavorite` que hace optimistic update (mueve el state antes de esperar al disco).
+- **`FavoriteButton.tsx`**: componente UI reutilizable. Dos variantes (`icon` solo corazón, `pill` con texto). Animación de "latido" en scale con `Animated.sequence`.
+
+### Snapshot mínimo vs ID-only
+
+Decisión clave: cada favorito guarda **un snapshot** con `title`, `subtitle`, `imageUrl` — no solo el ID.
+
+```typescript
+export interface Favorite {
+  kind: FavoriteKind;
+  id: string;
+  routeParams?: Record<string, string | number>;
+  addedAt: number;
+  title: string;
+  subtitle?: string;
+  imageUrl?: string | null;
+}
+```
+
+**Trade-off**:
+
+| Enfoque | Pros | Contras |
+|---|---|---|
+| Snapshot | `FavoritesScreen` renderiza instantáneo, sin red, funciona offline | Si el título/imagen cambian en producción, el favorito muestra el dato viejo hasta que el usuario abra el detalle |
+| ID-only | Siempre datos frescos | Abrir Favoritos con 20 ítems son 20 peticiones. Pésimo offline. |
+
+Para la frecuencia con la que Fatro cambia títulos (casi nunca) y para que la app se sienta rápida, el snapshot gana. Si en algún caso concreto un título cambia, el usuario lo verá al tocar el favorito (y el detalle abre con datos frescos).
+
+### Tipo discriminado y dispatcher de navegación
+
+Como Favoritos es **heterogéneo** (6 tipos de recursos distintos), al abrir uno tenemos que ir a la pantalla correcta con los parámetros correctos. Un `switch` sobre `kind` es la solución directa:
+
+```tsx
+const openFavorite = (fav: Favorite) => {
+  switch (fav.kind) {
+    case 'post':
+      navigation.navigate('PostDetail', { postId: Number(fav.id) });
+      break;
+    case 'consulta':
+      navigation.navigate('ConsultaDetail', {
+        groupKey: String(fav.routeParams?.groupKey ?? ''),
+        slug: String(fav.routeParams?.slug ?? fav.id),
+      });
+      break;
+    // ...
+  }
+};
+```
+
+El caso de **Consultas** es especial: los especialistas no tienen un ID entero, sino que se identifican por `groupKey + slug`. Lo guardamos en `routeParams` (un campo flexible del tipo `Favorite`) y el dispatcher lo consume al navegar.
+
+### El corazón "latido" con Animated
+
+`react-native` tiene `Animated` built-in, no hace falta `Reanimated`. La animación es:
+
+```tsx
+const [scale] = useState(() => new Animated.Value(1));
+
+const handlePress = async () => {
+  Animated.sequence([
+    Animated.timing(scale, { toValue: 1.25, duration: 120, useNativeDriver: true }),
+    Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
+  ]).start();
+  await toggleFavorite(data);
+};
+
+<Animated.Text style={{ transform: [{ scale }] }}>
+  {active ? '❤️' : '🤍'}
+</Animated.Text>
+```
+
+`useNativeDriver: true` delega la animación al hilo nativo: 60 FPS incluso si el hilo JS está ocupado (ej. guardando en AsyncStorage). Sin `useNativeDriver`, el latido se pausaría unos frames al guardar.
+
+### Lecciones aprendidas
+
+- **Una feature que no está en el "scope oficial" puede seguir siendo válida**. Favoritos no estaba en la app Android original, pero aporta valor real. No confundir "seguir el espejo" con "no poder innovar".
+- **Local primero, server después**. Para features que pueden vivir local sin perder utilidad, arrancar sin endpoint acelera el desarrollo y valida la UX antes de pedir cambios al backend.
+- **Snapshot + fallback a detalle con datos frescos** es un patrón robusto para listados que deben ser instantáneos.
+- **`Animated` nativo sigue siendo suficiente** para micro-interacciones puntuales. `Reanimated` es para animaciones complejas, gestuales o coreografiadas. Elegir según necesidad.
+- **Separación clara service → context → UI** hace que el día de mañana migrar a server-side sea tocar solo el service, sin reescribir UI.

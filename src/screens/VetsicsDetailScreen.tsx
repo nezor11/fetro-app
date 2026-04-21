@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
+import FavoriteButton from '../components/FavoriteButton';
 
 type VetsicsDetailRoute = RouteProp<RootStackParamList, 'VetsicsDetail'>;
 
@@ -127,6 +128,17 @@ export default function VetsicsDetailScreen() {
         {subtitle ? (
           <Text style={styles.subtitle}>{decodeHtml(subtitle)}</Text>
         ) : null}
+
+        <FavoriteButton
+          data={{
+            kind: 'vetsics',
+            id: race.ID,
+            title: decodeHtml(race.post_title),
+            subtitle: date ? formatDate(date) : subtitle || undefined,
+            imageUrl: image,
+          }}
+          style={{ marginTop: SPACING.sm, marginBottom: SPACING.md, alignSelf: 'flex-start' }}
+        />
 
         <View style={styles.chipsRow}>
           {date ? (
