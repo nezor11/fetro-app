@@ -90,6 +90,63 @@ export function getMetaArray(
 }
 
 /**
+ * Parsea una fecha en cualquiera de los formatos que el backend usa en
+ * formaciones: ACF datetime (`YYYY-MM-DD HH:MM:SS`) o solo fecha
+ * (`YYYY-MM-DD`). Devuelve null si no reconoce el formato.
+ */
+function parseTrainingDate(raw: string): Date | null {
+  if (!raw) return null;
+  // ACF datetime: "2026-04-15 18:00:00"
+  const m1 = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}):?(\d{2})?)?$/);
+  if (m1) {
+    const [, y, mo, d, h = '0', mi = '0', s = '0'] = m1;
+    const date = new Date(+y, +mo - 1, +d, +h, +mi, +s);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+}
+
+/**
+ * Devuelve todas las fechas relevantes de una formación: la del curso
+ * padre + la de cada sesión. Útil para la vista de calendario, que debe
+ * mostrar un marker por cada día en el que haya sesión (no solo por el
+ * "día de inicio" del curso).
+ *
+ * Las fechas se normalizan a medianoche local para que el calendario
+ * las agrupe correctamente por día (el usuario no necesita ver horas
+ * aquí; para eso está el detalle del evento).
+ */
+export function getTrainingDates(training: Training): Date[] {
+  const dates: Date[] = [];
+
+  // Fecha del curso padre (meta `course_date` o `fecha_formacion`).
+  const courseDate =
+    getMetaValue(training.meta, 'course_date') ||
+    getMetaValue(training.meta, 'fecha_formacion');
+  const parent = parseTrainingDate(courseDate);
+  if (parent) dates.push(parent);
+
+  // Fechas de las sesiones (meta `sesions_N_sesion_date`).
+  for (const m of training.meta || []) {
+    if (!/^sesions_\d+_sesion_date$/.test(m.tag)) continue;
+    const d = parseTrainingDate(m.value);
+    if (d) dates.push(d);
+  }
+
+  // Dedupe por día (YYYY-MM-DD) manteniendo la instancia más temprana.
+  const seen = new Set<string>();
+  const unique: Date[] = [];
+  for (const d of dates) {
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(d);
+    }
+  }
+  return unique;
+}
+
+/**
  * Comprueba si el usuario (por su ID) está inscrito en una formación.
  *
  * El backend guarda los IDs de usuarios inscritos en el meta

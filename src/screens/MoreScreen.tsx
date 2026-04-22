@@ -74,6 +74,12 @@ const TILES: Tile[] = [
     subtitle: 'Carreras y formaciones en las que te inscribiste',
   },
   {
+    route: 'CalendarTab',
+    emoji: '🗓️',
+    title: 'Calendario',
+    subtitle: 'Vista temporal de carreras, formaciones y solicitudes',
+  },
+  {
     route: 'Search',
     emoji: '🔍',
     title: 'Buscar',

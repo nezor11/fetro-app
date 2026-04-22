@@ -12,6 +12,7 @@ import ConsultasScreen from '../screens/ConsultasScreen';
 import SolicitudesScreen from '../screens/SolicitudesScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import AsistenciasScreen from '../screens/AsistenciasScreen';
+import CalendarScreen from '../screens/CalendarScreen';
 import MoreScreen from '../screens/MoreScreen';
 import { BottomTabParamList } from './types';
 import { COLORS } from '../constants/theme';
@@ -44,6 +45,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Solicitudes: '📝',
     Favorites: '❤️',
     Asistencias: '🎟️',
+    CalendarTab: '🗓️',
     Search: '🔍',
     More: '⋯',
     Profile: '👤',
@@ -119,6 +121,11 @@ export default function BottomTabs() {
         name="Asistencias"
         component={AsistenciasScreen}
         options={{ title: 'Asistencias' }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarScreen}
+        options={{ title: 'Calendario' }}
       />
       <Tab.Screen
         name="Search"

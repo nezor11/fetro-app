@@ -1861,3 +1861,141 @@ En una app sin cache layer tendrías que pasar los datos vía props/context desd
 - **No asumir que todos los endpoints del backend exponen el mismo shape**. `get_vetsics` tiene `requested` top-level; `get_webinars_group` lo esconde en meta con otra estructura. Si hay varios endpoints de "cosas que el usuario solicita", pide al backend un shape uniforme — o si ya están desplegados y no puedes cambiar, escribe helpers que abstraigan las diferencias.
 - **Un helper por tipo de consulta, no un dispatcher gigante**. `isUserRegisteredInTraining` hace UNA cosa. No un `getUserRelation(entity, user)` que decida por `entity.kind` y tenga cinco ramas. Helpers específicos son más fáciles de testear y más rápidos de leer.
 - **Agregación cliente-side de endpoints existentes** es muchas veces más rápida y barata que pedir un endpoint nuevo al backend. "Asistencias" no necesitó ninguna PR al plugin — compone dos respuestas que ya se piden igualmente.
+
+---
+
+## 27. Calendario: vista agregadora temporal de eventos
+
+### El contexto
+
+La app Android original tiene un `fragment_calendario.xml` basado en `MaterialCalendar` (la librería de Google). En FetroApp lo reconstruimos con `react-native-calendars`, que es el estándar de facto en RN y tiene API equivalente (marcadores, locales, modos mes/agenda) sin requerir config nativa.
+
+La pantalla agrega **tres fuentes** de eventos con fecha:
+
+- **Carreras VetSICS** → usa `getRaceDate()` (regex sobre 6 fuentes de meta, heredado de `services/vetsics.ts`)
+- **Formaciones** → usa `getTrainingDates()`, un helper nuevo que une la fecha del curso padre y las de cada sesión (`sesions_N_sesion_date`)
+- **Solicitudes** → usa `parseDatePromo()` ya existente
+
+### Por qué `react-native-calendars`
+
+| Opción | Pros | Contras |
+|---|---|---|
+| `react-native-calendars` | Estándar, mantenido, multi-dot markers, locales, agenda, cero config nativa | ~80 KB, API un poco vieja (Ember-style) |
+| `react-native-big-calendar` | Moderno, mejor para vista semanal/diaria estilo Google Calendar | Pobre para vista mensual con dots, menos comunidad |
+| Custom con FlatList | Control total | Reinventar la rueda; un mes en grid no es trivial |
+
+Elegimos **`react-native-calendars`** porque el 80% de la pantalla es "mes con dots" y la librería lo resuelve gratis. El 20% restante (lista de eventos del día) lo hacemos con `FlatList`.
+
+### Locale español registrado una vez a nivel de módulo
+
+La librería viene en inglés por defecto. Se registra el locale `es` fuera del componente para que se aplique inmediatamente y no en cada render:
+
+```typescript
+LocaleConfig.locales['es'] = {
+  monthNames: ['Enero', 'Febrero', ...],
+  monthNamesShort: ['Ene.', 'Feb.', ...],
+  dayNames: ['Domingo', 'Lunes', ...],
+  dayNamesShort: ['Dom.', 'Lun.', ...],
+  today: 'Hoy',
+};
+LocaleConfig.defaultLocale = 'es';
+```
+
+Y en el `<Calendar>` se pasa `firstDay={1}` para que la semana empiece en lunes (convención española — por defecto sería domingo, convención americana).
+
+### `markingType="multi-dot"` + estructura del `markedDates`
+
+Para mostrar varios tipos de evento en el mismo día sin saturar, se usa el modo **multi-dot**. La librería exige un shape concreto en `markedDates`:
+
+```typescript
+{
+  "2026-04-23": {
+    dots: [
+      { key: "vetsics", color: "#8C1464" },
+      { key: "training", color: "#1976D2" },
+    ],
+    selected: true, // el día elegido por el usuario
+  },
+  "2026-05-15": {
+    dots: [{ key: "solicitud", color: "#E67E22" }],
+  },
+}
+```
+
+**Dedupe por día + tipo**: si un día tiene 3 formaciones, pintar 3 dots azules del mismo color es ruido visual. El helper `buildMarkedDates` usa `Set<CalendarEventKind>` por día:
+
+```typescript
+const byDay = new Map<string, Set<CalendarEventKind>>();
+for (const e of events) {
+  if (!byDay.has(e.dateKey)) byDay.set(e.dateKey, new Set());
+  byDay.get(e.dateKey)!.add(e.kind);
+}
+```
+
+Al final, un día con 3 formaciones muestra **un solo** dot azul. Si además tiene una solicitud, verá dos dots (azul + naranja).
+
+### Tercera pantalla que saca partido del cache compartido
+
+Tras "Asistencias" y "Mis solicitudes", esta es la tercera pantalla que agrega varios endpoints sin fetchear nada nuevo:
+
+```typescript
+const vetsicsQuery = useQuery({
+  queryKey: queryKeys.vetsics(cookie),
+  queryFn: () => getVetsicsRaces(cookie!),
+  enabled: !!cookie,
+});
+// + trainingsQuery + solicitudesQuery con las mismas keys
+```
+
+Si el usuario ha pasado por las pestañas VetSICS, Formación o Solicitudes en los últimos 5 minutos, el calendario abre instantáneo. La inversión del refactor de TanStack Query se amortiza una vez más.
+
+### Dedupe por día en `getTrainingDates`
+
+Cada formación tiene un `course_date` (fecha del padre) y N `sesions_N_sesion_date`. A veces el padre y la primera sesión caen el mismo día. Para no pintar markers duplicados:
+
+```typescript
+const seen = new Set<string>();
+const unique: Date[] = [];
+for (const d of dates) {
+  const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  if (!seen.has(key)) {
+    seen.add(key);
+    unique.push(d);
+  }
+}
+return unique;
+```
+
+La clave combina año-mes-día (sin hora) porque en el calendario nos da igual la hora — eso se ve ya en el detalle del evento. Medianoche local es suficiente.
+
+### `Intl.DateTimeFormat` para la cabecera del día
+
+Para pintar "jueves, 23 de abril de 2026" encima de la lista de eventos del día seleccionado, usamos `Intl.DateTimeFormat('es-ES')`. Está disponible en React Native moderno sin polyfills (Hermes ya incluye ICU desde 2023). Con fallback al propio `dateKey` por si algún target viejo fallase.
+
+### Navegación unificada con `switch` sobre `kind`
+
+Cada evento lleva su `kind` discriminador; la función `openEvent` tiene un switch que dispara la navegación correcta:
+
+```typescript
+switch (event.kind) {
+  case 'vetsics':
+    navigation.navigate('VetsicsDetail', { raceId: event.id });
+    break;
+  case 'training':
+    navigation.navigate('TrainingDetail', { trainingId: event.id });
+    break;
+  case 'solicitud':
+    navigation.navigate('SolicitudDetail', { solicitudId: event.id });
+    break;
+}
+```
+
+Mismo patrón que `FavoritesScreen`. Cuando salga una 4ª fuente de eventos (por ejemplo consultas con cita agendada), se añade un case y ya.
+
+### Lecciones aprendidas
+
+- **Registrar `LocaleConfig` a nivel de módulo, no de componente**. Si lo pones dentro del `useEffect` o el body del componente, hay un flash de inglés en la primera renderización.
+- **`multi-dot` con dedupe por tipo** escala mucho mejor que `dot` simple cuando un día puede tener 5 formaciones de golpe.
+- **`firstDay={1}` para España**. Es una opción, no un default — la librería asume domingo-primero (US).
+- **`Intl.DateTimeFormat` ya funciona nativo en RN moderno**. No hace falta `moment`, `date-fns` ni `dayjs` para formateos simples de fecha.
+- **Cache compartido se paga solo en la 3ª pantalla**. Cada nueva vista agregadora que reutiliza queryKeys es una pequeña victoria acumulada del refactor anterior.
