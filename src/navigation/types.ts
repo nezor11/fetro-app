@@ -13,6 +13,8 @@ export type RootStackParamList = {
   EditProfile: undefined;
   MyRequests: undefined;
   Unsubscribe: undefined;
+  QRScan: undefined;
+  QRDetail: { identifier: string };
 };
 
 /**

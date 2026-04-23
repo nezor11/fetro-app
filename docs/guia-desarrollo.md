@@ -2093,3 +2093,161 @@ if (
 - **Visibilidad proporcional a la frecuencia y reversibilidad**. Acciones raras e irreversibles no merecen un botón protagonista. Un enlace gris al final del perfil es la presencia adecuada.
 - **Soft-delete salva el histórico**. En cualquier app B2B con facturación de por medio, nunca hacer `DELETE FROM users`. Una meta de desactivación basta para todos los efectos prácticos y te libra de pleitos fiscales.
 - **No probar endpoints destructivos con la cuenta real**. Aunque parezca obvio, es muy fácil tener un lapsus. Para este tipo de features, crear un usuario throwaway (`email+suffix@gmail.com`) o tener claro cómo reactivar desde el backend antes de darle al botón.
+
+---
+
+## 29. Escaneo QR con expo-camera
+
+### El contexto y lo que NO es
+
+Al empezar asumí que los "QR de productos" eran prospectos farmacéuticos — escanear un frasco y ver dosis/principio activo. **Equivocación**: los 90 QR que devuelve `get_qrcodes` son códigos de compromiso del veterinario con distintos tipos de actividad:
+
+| `qr_type` | Significado | Ejemplos |
+|---|---|---|
+| `ASISTENCIA` | Confirma asistencia a taller/charla | "taller gatos", "Taller Antibioterapia" |
+| `RECIBI` | Confirma recepción de merchandising | "Recibí Agenda Fatro", "Recibí Queso ANEMBE" |
+| `ACUERDO` | Firma compromiso de beca | "Acuerdo Beca Posgrado Factor Humano" |
+| `COMPROMISO` | Inscripción a taller in-company | "Compromiso Taller in Company 2026" |
+
+El veterinario escanea un QR (impreso en un folleto, en el propio merchandising o en un e-mail) y la app le muestra qué acaba de "registrar". El **registro real** lo gestiona el equipo Fatro con ese código — no hay endpoint de submission. Esto es importante: la pantalla es **informativa**, no transaccional.
+
+### Por qué `expo-camera` y no `expo-barcode-scanner`
+
+`expo-barcode-scanner` fue **deprecated** por Expo a partir del SDK 51 en favor de `expo-camera` v15+, que unifica cámara normal y lectura de códigos en un solo componente (`CameraView`). Ventajas:
+
+- Una sola librería que cubre los dos casos de uso.
+- Soporta `barcodeScannerSettings` con array de `barcodeTypes` → QR + Code128 + Code39 + EAN13 en la misma llamada.
+- Soporta web vía `getUserMedia` sin hacks adicionales.
+
+### Permisos — plugin en `app.json`, no manualmente
+
+El setup moderno de Expo Camera es:
+
+```json
+"plugins": [
+  [
+    "expo-camera",
+    {
+      "cameraPermission": "FetroApp necesita acceso a la cámara para escanear códigos QR..."
+    }
+  ]
+]
+```
+
+Esto hace que los builds de producción generados por EAS **inyecten automáticamente** `NSCameraUsageDescription` en `Info.plist` (iOS) y `<uses-permission android:name="android.permission.CAMERA"/>` en el `AndroidManifest.xml`. En desarrollo con Expo Go, los permisos se piden en runtime con `useCameraPermissions()`:
+
+```typescript
+const [permission, requestPermission] = useCameraPermissions();
+
+if (!permission) return <Spinner />;          // primera carga
+if (!permission.granted) return <AskButton />; // rechazado o aún no pedido
+return <CameraView ... />;                     // concedido
+```
+
+### El anti-patrón "escaneo múltiple"
+
+`onBarcodeScanned` se dispara **en cada frame** en el que el detector encuentra un código. Si el usuario deja el QR delante de la cámara 3 segundos, se dispara ~90 veces (30 FPS × 3s). Sin protección, lanzarías 90 peticiones al backend y 90 navegaciones.
+
+La solución idiomática es un `useRef<boolean>` que bloquea:
+
+```typescript
+const scanningLockedRef = useRef(false);
+
+const handleBarcodeScanned = (result) => {
+  if (scanningLockedRef.current || loading) return;
+  scanningLockedRef.current = true;
+  resolveIdentifier(result.data);
+};
+```
+
+Se usa `useRef` en lugar de `useState` a propósito — mutar un ref **no dispara re-render**. Con state tendríamos delay de un frame entre el escaneo y el bloqueo, tiempo suficiente para que llegase el siguiente evento.
+
+El lock se libera en dos sitios:
+- **Si el QR no existe o hay error de red** → se libera para que el usuario pueda reintentar.
+- **Si el QR existe y navegamos** → se mantiene bloqueado; al volver de la pantalla de detalle con "Escanear otro QR" el componente se remonta (`navigation.replace`) y el ref vuelve a `false`.
+
+### Fallback manual: input de texto
+
+En tres escenarios la cámara no sirve:
+
+1. **Web**: `CameraView` funciona en Chrome pero solo con HTTPS o `localhost`. En algunos entornos corporativos no va.
+2. **Permiso denegado**: el usuario puede haber dicho "no" a cámara sin querer.
+3. **QR dañado/borroso**: físicamente ilegible.
+
+Para cubrir estos casos, la pantalla tiene una sección de input manual **siempre visible**:
+
+```tsx
+<TextInput
+  placeholder="Ej. 0001"
+  autoCapitalize="characters"
+  value={manualIdentifier}
+  onChangeText={setManualIdentifier}
+/>
+<TouchableOpacity
+  onPress={() => resolveIdentifier(manualIdentifier)}
+  disabled={!manualIdentifier.trim()}
+>
+  Buscar
+</TouchableOpacity>
+```
+
+Mismo endpoint, mismo handler, mismo flujo. Gratis. Y además es lo único que hay cuando el permiso está rechazado.
+
+### `navigation.replace` en vez de `navigate`
+
+Al navegar del scanner al detalle, se usa `replace` para que el botón "atrás" del header no devuelva al scanner (se quedaría con la cámara encendida). El scanner entra en el stack **solo cuando se invoca de nuevo**:
+
+```tsx
+// desde scanner al detalle:
+navigation.replace('QRDetail', { identifier });
+
+// desde detalle "escanear otro QR":
+navigation.replace('QRScan');
+```
+
+Así la historia de navegación queda limpia: Más → [scanner ↔ detalle] → Más, sin capas acumuladas.
+
+### Tile del hub "Más" apunta a una Stack screen, no a una tab
+
+Todas las demás entradas del hub "Más" son tabs ocultas. `QRScan` es distinto: **stack screen** que se abre como pantalla completa, porque:
+
+- No queremos que la cámara se quede viva cuando el usuario cambia de pestaña.
+- El flujo scanner → detalle → scanner es transitorio, no persistente.
+
+Eso obligó a tipar la navegación del `MoreScreen` con `CompositeNavigationProp`:
+
+```typescript
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<BottomTabParamList>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
+```
+
+Así `navigation.navigate('QRScan')` compila sin errores aunque `QRScan` no sea una tab.
+
+### Tipado defensivo del QR type
+
+El backend puede devolver cualquier string en `qr_type` (los 4 que vimos son los conocidos hoy, mañana puede haber `FORMACION`, `EVENTO`, etc.). El helper `getQRTypeDisplay` tiene un fallback:
+
+```typescript
+export function getQRTypeDisplay(qrType: string) {
+  const upper = (qrType || '').toUpperCase();
+  return (
+    QR_TYPE_DISPLAY[upper] ?? {
+      label: qrType || 'QR',
+      emoji: '🔖',
+      color: '#666',
+    }
+  );
+}
+```
+
+Si mañana aparece un `qr_type` nuevo, se pinta con emoji genérico 🔖 y color gris — no rompe la UI, solo pierde el matiz visual. Añadir soporte específico es una línea en el mapa.
+
+### Lecciones aprendidas
+
+- **No asumir scope por el nombre de un endpoint**. `get_qrcodes` sonaba a "productos con QR farmacéutico", era "compromisos de veterinario". Verificar con 2 respuestas reales antes de diseñar ahorra un rediseño completo.
+- **`useRef` para locks imperativos**. `useState` fuerza re-render y hay un tick de delay que es suficiente para que lleguen eventos duplicados. Para banderas que no necesitan reflejarse en UI, ref > state.
+- **Fallback manual gratis**. Cuando la UX depende de hardware (cámara, GPS, micrófono), siempre ofrecer una alternativa manual. Resuelve permisos denegados, entornos limitados y accesibilidad.
+- **`navigation.replace` para flujos transitorios**. Cuando una pantalla no tiene sentido volver atrás (scanner → detalle), `replace` mantiene la pila limpia.
+- **Plugins de Expo en `app.json` > parcheos manuales**. Toda librería de Expo que requiera permisos nativos tiene un plugin de config que los inyecta en el build. Usarlo siempre en lugar de editar `Info.plist`/`AndroidManifest.xml` a mano.

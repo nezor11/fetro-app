@@ -12,6 +12,8 @@ import SolicitudDetailScreen from '../screens/SolicitudDetailScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
 import UnsubscribeScreen from '../screens/UnsubscribeScreen';
+import QRScanScreen from '../screens/QRScanScreen';
+import QRDetailScreen from '../screens/QRDetailScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -95,6 +97,16 @@ export default function RootNavigator() {
             name="Unsubscribe"
             component={UnsubscribeScreen}
             options={{ title: 'Baja de cuenta' }}
+          />
+          <Stack.Screen
+            name="QRScan"
+            component={QRScanScreen}
+            options={{ title: 'Escanear QR' }}
+          />
+          <Stack.Screen
+            name="QRDetail"
+            component={QRDetailScreen}
+            options={{ title: 'Código escaneado' }}
           />
         </>
       ) : (

@@ -25,6 +25,14 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FetroApp necesita acceso a la cámara para escanear códigos QR de productos, compromisos y merchandising de Fatro."
+        }
+      ]
+    ]
   }
 }

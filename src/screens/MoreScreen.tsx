@@ -6,16 +6,27 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { BottomTabParamList } from '../navigation/types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabParamList, RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
-type Nav = BottomTabNavigationProp<BottomTabParamList>;
+/**
+ * Nav combinada: permite que desde el hub "Más" se pueda navegar tanto
+ * a tabs ocultas (Formación, VetSICS, Consultas...) como a rutas
+ * directas del Stack raíz (QRScan, EditProfile...). Sin esta
+ * composición, `navigation.navigate('QRScan')` lanzaría un error de
+ * tipos porque el BottomTabNavigator no conoce las rutas del Stack.
+ */
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<BottomTabParamList>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 interface Tile {
-  /** Nombre de la tab de destino (debe existir en BottomTabParamList). */
-  route: keyof BottomTabParamList;
+  /** Nombre de tab oculta o stack screen del Stack raíz. */
+  route: keyof BottomTabParamList | keyof RootStackParamList;
   emoji: string;
   title: string;
   subtitle: string;
@@ -78,6 +89,12 @@ const TILES: Tile[] = [
     emoji: '🗓️',
     title: 'Calendario',
     subtitle: 'Vista temporal de carreras, formaciones y solicitudes',
+  },
+  {
+    route: 'QRScan',
+    emoji: '📷',
+    title: 'Escanear QR',
+    subtitle: 'Compromisos, asistencias y merchandising recibido',
   },
   {
     route: 'Search',
