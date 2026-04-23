@@ -142,6 +142,16 @@ export default function ProfileScreen() {
       >
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.unsubscribeLink}
+        onPress={() => navigation.navigate('Unsubscribe')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.unsubscribeLinkText}>
+          Dar de baja mi cuenta
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -275,11 +285,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: SPACING.md,
     marginTop: SPACING.lg,
-    marginBottom: SPACING.xl,
   },
   logoutText: {
     color: COLORS.white,
     fontSize: FONTS.regular,
     fontWeight: '700',
+  },
+  /**
+   * Enlace secundario a la pantalla destructiva, mucho menos
+   * prominente que el botón de logout para que el usuario no lo toque
+   * por error. Deliberadamente como texto simple subrayado en vez de
+   * botón.
+   */
+  unsubscribeLink: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
+  unsubscribeLinkText: {
+    color: COLORS.textMuted,
+    fontSize: FONTS.small,
+    textDecorationLine: 'underline',
   },
 });

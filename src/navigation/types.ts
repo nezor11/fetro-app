@@ -12,6 +12,7 @@ export type RootStackParamList = {
   SolicitudDetail: { solicitudId: string };
   EditProfile: undefined;
   MyRequests: undefined;
+  Unsubscribe: undefined;
 };
 
 /**

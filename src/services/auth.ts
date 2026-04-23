@@ -193,3 +193,45 @@ export async function clearAuth(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY_COOKIE);
   await AsyncStorage.removeItem(STORAGE_KEY_USER);
 }
+
+/**
+ * Da de baja la cuenta del usuario autenticado. El endpoint
+ * `unsubscribe_account` del plugin hace un **soft-delete**: marca el
+ * meta `account_activated = 0` del usuario pero no elimina la cuenta
+ * del backend. Esto respeta GDPR (derecho al olvido) sin perder el
+ * histórico con fines legales/fiscales — si el usuario quiere borrado
+ * completo, hay que contactar con el DPO.
+ *
+ * Flujo esperado tras esta llamada:
+ *
+ * 1. El backend responde `true` y pone `account_activated = 0`.
+ * 2. La app limpia la cookie local con `clearAuth()`.
+ * 3. El `AuthContext` marca `isLoggedIn = false`.
+ * 4. `RootNavigator` conmuta automáticamente al stack de Login.
+ *
+ * No hace `wp_logout_user` server-side, así que técnicamente la
+ * cookie de WP sigue siendo válida hasta su expiración — pero al
+ * borrarla de AsyncStorage nadie puede volver a usarla desde la app.
+ */
+export async function unsubscribeAccount(cookie: string): Promise<void> {
+  try {
+    const response = await axios.get(
+      `${AUTH_BASE_URL}/api/user/unsubscribe_account/`,
+      { params: { cookie, insecure: 'cool' }, timeout: 15000 }
+    );
+
+    // El endpoint devuelve `true` directo en el body (no un objeto
+    // `{status, ...}` como otros endpoints del plugin). Aceptamos
+    // tanto `true` como `{status:'ok'}` por si cambian la forma.
+    if (
+      response.data !== true &&
+      response.data?.status !== 'ok'
+    ) {
+      throw new Error(
+        response.data?.error || 'No se pudo dar de baja la cuenta'
+      );
+    }
+  } catch (err) {
+    handleNetworkError(err, 'dar de baja la cuenta');
+  }
+}

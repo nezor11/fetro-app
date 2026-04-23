@@ -11,6 +11,7 @@ import ConsultaDetailScreen from '../screens/ConsultaDetailScreen';
 import SolicitudDetailScreen from '../screens/SolicitudDetailScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
+import UnsubscribeScreen from '../screens/UnsubscribeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -89,6 +90,11 @@ export default function RootNavigator() {
             name="MyRequests"
             component={MyRequestsScreen}
             options={{ title: 'Mis solicitudes' }}
+          />
+          <Stack.Screen
+            name="Unsubscribe"
+            component={UnsubscribeScreen}
+            options={{ title: 'Baja de cuenta' }}
           />
         </>
       ) : (

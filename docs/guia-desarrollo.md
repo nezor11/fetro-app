@@ -1999,3 +1999,97 @@ Mismo patrón que `FavoritesScreen`. Cuando salga una 4ª fuente de eventos (por
 - **`firstDay={1}` para España**. Es una opción, no un default — la librería asume domingo-primero (US).
 - **`Intl.DateTimeFormat` ya funciona nativo en RN moderno**. No hace falta `moment`, `date-fns` ni `dayjs` para formateos simples de fecha.
 - **Cache compartido se paga solo en la 3ª pantalla**. Cada nueva vista agregadora que reutiliza queryKeys es una pequeña victoria acumulada del refactor anterior.
+
+---
+
+## 28. Baja de cuenta (GDPR soft-delete)
+
+### El contexto
+
+Para cumplir con GDPR y con la guía de Play Store (política de privacidad que exige "acción clara del usuario para dar de baja su cuenta desde la propia app"), añadimos la pantalla **Baja de cuenta** que consume el endpoint `unsubscribe_account` del plugin. Ese endpoint ya existía y hace un **soft-delete**: pone `account_activated = 0` en `wp_usermeta` del usuario sin eliminar la cuenta físicamente del backend.
+
+### Por qué soft-delete y no hard-delete
+
+Razones legales y de negocio:
+
+- **Obligación fiscal**: los datos de facturación e inscripciones a eventos se conservan 5 años por ley.
+- **Trazabilidad de participaciones**: carreras VetSICS y formaciones completadas no se borran porque son récord histórico de quien asistió.
+- **Reactivación posible**: si el usuario se arrepiente, el equipo Fatro puede volver a poner `account_activated = 1` sin perder su histórico.
+
+Si el usuario quiere un **borrado completo** (derecho al olvido GDPR), el copy de la pantalla indica contactar con `dpo@fatroiberica.es`. Esa operación la hace el DPO a mano.
+
+### Diseño de fricción intencional
+
+La operación es irreversible desde la app, así que el botón destructivo sigue el patrón de GitHub / Stripe / AWS: **el usuario debe escribir una palabra específica antes de que se active**. En nuestro caso, `BAJA`:
+
+```typescript
+const CONFIRMATION_WORD = 'BAJA';
+
+const canSubmit = confirmation.trim().toUpperCase() === CONFIRMATION_WORD;
+
+<TextInput
+  value={confirmation}
+  onChangeText={setConfirmation}
+  placeholder={CONFIRMATION_WORD}
+  autoCapitalize="characters"
+  textAlign="center"
+  // bordes rojos + letra-espaciada para reforzar destructividad
+/>
+
+<TouchableOpacity
+  disabled={!canSubmit || loading}
+  style={[styles.dangerButton, !canSubmit && styles.dangerButtonDisabled]}
+>
+  Dar de baja mi cuenta
+</TouchableOpacity>
+```
+
+Esto evita tappeos accidentales en una acción irreversible. También hace que el usuario **lea la pantalla** antes de confirmar — el copy de las tres secciones (qué pasa, qué se conserva, cómo reactivar) entra casi forzosamente.
+
+### Enlace muy poco prominente en ProfileScreen
+
+El enlace desde el Perfil es **subrayado gris pequeño**, no un botón. Debajo incluso del botón "Cerrar sesión". Decisión consciente:
+
+- Logout es una acción **frecuente y reversible** → botón rojo bien visible.
+- Baja es una acción **rara e irreversible** → enlace discreto que solo encuentra quien lo busca.
+
+```tsx
+<TouchableOpacity
+  style={styles.unsubscribeLink}
+  onPress={() => navigation.navigate('Unsubscribe')}
+>
+  <Text style={styles.unsubscribeLinkText}>
+    Dar de baja mi cuenta
+  </Text>
+</TouchableOpacity>
+```
+
+### Flujo tras confirmar
+
+Tres pasos en cadena:
+
+1. **`unsubscribeAccount(cookie)`** → llamada al endpoint, espera `true` o `{status:'ok'}`.
+2. **`logout()`** del `AuthContext` → limpia cookie y user de `AsyncStorage`, pone `isLoggedIn = false`.
+3. **`RootNavigator` detecta el cambio** y conmuta automáticamente al stack de Login. No hay que hacer navegación manual.
+
+Después, un `Alert.alert` cross-platform informa de que la cuenta está desactivada y de cómo reactivar.
+
+### Detalle del endpoint: acepta `true` literal
+
+El plugin devuelve `true` (el literal booleano) en el body, no un objeto `{status: 'ok'}` como otros endpoints. El servicio acepta ambas formas por si un día cambian la API:
+
+```typescript
+if (
+  response.data !== true &&
+  response.data?.status !== 'ok'
+) {
+  throw new Error('No se pudo dar de baja la cuenta');
+}
+```
+
+### Lecciones aprendidas
+
+- **Fricción intencional para acciones destructivas**. Escribir una palabra específica es el patrón estándar (GitHub pide el nombre del repo, Stripe tu email, etc.). Para móvil funciona igual.
+- **Visibilidad proporcional a la frecuencia y reversibilidad**. Acciones raras e irreversibles no merecen un botón protagonista. Un enlace gris al final del perfil es la presencia adecuada.
+- **Soft-delete salva el histórico**. En cualquier app B2B con facturación de por medio, nunca hacer `DELETE FROM users`. Una meta de desactivación basta para todos los efectos prácticos y te libra de pleitos fiscales.
+- **No probar endpoints destructivos con la cuenta real**. Aunque parezca obvio, es muy fácil tener un lapsus. Para este tipo de features, crear un usuario throwaway (`email+suffix@gmail.com`) o tener claro cómo reactivar desde el backend antes de darle al botón.
