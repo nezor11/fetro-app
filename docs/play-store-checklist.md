@@ -59,27 +59,28 @@ Vídeo en YouTube (público o no listado) con un walkthrough de 30-60s de la app
 
 ---
 
-## 🔴 Bloqueado — necesita decisión / acción de Marcelo
+## 🟢 Decisiones tomadas (2026-04-23)
 
-### Decisión 1 · Nombre comercial final
+### Decisión 1 · Nombre comercial → ✅ "FetroApp"
 
-Actualmente `app.json` tiene `name: "FetroApp"` que es el nombre de proyecto. El nombre que verá el usuario en Play Store puede ser distinto (en `app.json` el campo `name` es para el nombre de carpeta, el visible es el de Play Console). Algunos candidatos:
+Mantenemos el nombre actual de proyecto. En Play Console se introducirá tal cual.
 
-- "Fatro Profesionales"
-- "Comunidad Fatro"
-- "Fatro Ibérica"
-- "Fatro App"
+### Decisión 2 · Package ID → ✅ `com.novicell.fetroapp`
 
-### Decisión 2 · Package ID definitivo
+App nueva, no hereda la `es.swapp.fatrocomunidad` original. Razones:
 
-Provisional: `com.fatroibericas.app`. Si Marcelo quiere otro, se cambia **antes** del primer build de **producción** (no del de preview). Cambiarlo después del lanzamiento es publicar una app nueva, perdiendo los descargas y reviews acumulados.
+- Deja claro que el origen es **Novicell** (es un proyecto piloto/training, no la app oficial corporativa de Fatro).
+- No suplanta a Fatro ni a SwApp.
+- Si en el futuro Fatro decide adoptar la app como oficial, se puede **transferir la titularidad** en Play Console sin cambiar el package ID — solo cambia quién la mantiene.
+- Sigue la convención `com.<empresa>.<proyecto>`.
 
-### Decisión 3 · ¿Sustituir la Android original o crear app nueva?
+### Decisión 3 · ¿Sustituir la Android original? → ✅ No, app nueva
 
-La Android actual `es.swapp.fatrocomunidad` está publicada en Play Store por SwApp. Dos vías:
+La Android original `es.swapp.fatrocomunidad` (publicada por SwApp) sigue su camino. FetroApp coexiste como app independiente. Los usuarios actuales no reciben "actualización" automática — descargarían la nueva si así lo deciden.
 
-- **Heredar el package**: requiere conseguir acceso a la cuenta de Play Console donde está publicada actualmente (probablemente de SwApp). Los usuarios actuales reciben actualización en lugar de instalar app nueva.
-- **App nueva con package distinto**: app independiente. Los usuarios actuales tendrían que descargar la nueva. La antigua puede coexistir o desactivarse.
+---
+
+## 🔴 Bloqueado — sigue pendiente con Marcelo
 
 ### Decisión 4 · Política de privacidad publicada
 
