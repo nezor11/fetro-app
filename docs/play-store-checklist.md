@@ -65,14 +65,14 @@ Vídeo en YouTube (público o no listado) con un walkthrough de 30-60s de la app
 
 Mantenemos el nombre actual de proyecto. En Play Console se introducirá tal cual.
 
-### Decisión 2 · Package ID → ✅ `com.novicell.fetroapp`
+### Decisión 2 · Package ID → ✅ `com.novicell.labs.fetroapp`
 
 App nueva, no hereda la `es.swapp.fatrocomunidad` original. Razones:
 
-- Deja claro que el origen es **Novicell** (es un proyecto piloto/training, no la app oficial corporativa de Fatro).
+- Deja claro que el origen es **Novicell** y que es un **proyecto del entorno `labs`** (piloto/training/I+D), no la app oficial corporativa de Fatro.
 - No suplanta a Fatro ni a SwApp.
-- Si en el futuro Fatro decide adoptar la app como oficial, se puede **transferir la titularidad** en Play Console sin cambiar el package ID — solo cambia quién la mantiene.
-- Sigue la convención `com.<empresa>.<proyecto>`.
+- Sigue la convención `com.<empresa>.<entorno>.<proyecto>`, alineado con la organización del repositorio (`Novicell/Proyectos/_labs/wordpress-apis/FatroApp`).
+- Si en el futuro Fatro decide adoptar la app como oficial corporativa, lo limpio será publicar entonces una **app distinta** con package `com.fatroibericas.app` o equivalente — la actual queda como histórico de I+D. Cambiar el package ID después del primer release público es publicar app nueva en Play Store, perdiendo descargas y reviews acumulados.
 
 ### Decisión 3 · ¿Sustituir la Android original? → ✅ No, app nueva
 
