@@ -15,13 +15,18 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.fatroibericas.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -33,6 +38,12 @@
           "cameraPermission": "FetroApp necesita acceso a la cámara para escanear códigos QR de productos, compromisos y merchandising de Fatro."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4ed28b79-ddbe-4d1d-bc63-b960583f9863"
+      }
+    },
+    "owner": "jmtnez"
   }
 }
