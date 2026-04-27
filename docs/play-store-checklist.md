@@ -22,7 +22,7 @@ Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. 
 
 ### Iconos finales (branding real)
 
-Los iconos actuales son los **defaults del template de Expo**. Para Play Store hay que sustituir por iconos con branding real de Fatro / Novicell. Necesitamos:
+Los iconos actuales son los **defaults del template de Expo**. Para Play Store hay que sustituir por iconos con branding de Novicell o un identificador propio del proyecto piloto. Necesitamos:
 
 - **`assets/icon.png`** — 1024×1024 PNG sin transparencia.
 - **`assets/android-icon-foreground.png`** — 512×512 PNG, capa frontal del adaptive icon (logo recortado, fondo transparente).
@@ -30,7 +30,7 @@ Los iconos actuales son los **defaults del template de Expo**. Para Play Store h
 - **`assets/android-icon-monochrome.png`** — 512×512 PNG en escala de grises (Android 13+ themed icons).
 - **`assets/splash-icon.png`** — 1024×1024 PNG para la pantalla de splash.
 
-Diseñador puede partir del logo oficial de Fatro o crear una variante específica para la app móvil. Si no hay diseñador disponible, se puede generar con **`https://icon.kitchen`** a partir de un SVG/PNG del logo en alta resolución.
+Como es proyecto piloto de Novicell, mejor partir del **logo de Novicell** o crear un identificador propio para FetroApp que no use marca de Fatro. Si no hay diseñador disponible, se puede generar con **`https://icon.kitchen`** a partir de un SVG/PNG del logo en alta resolución.
 
 ### Screenshots para la ficha de Play Store
 
@@ -84,11 +84,11 @@ La Android original `es.swapp.fatrocomunidad` (publicada por SwApp) sigue su cam
 
 ### Decisión 4 · Política de privacidad publicada
 
-Validar el borrador (`docs/privacy-policy-draft.md`) con DPO de Fatro y publicar en una URL pública. Posibles ubicaciones:
+Validar el borrador (`docs/privacy-policy-draft.md`) con DPO de Novicell y publicar en una URL pública. Posibles ubicaciones:
 
-- `fatroiberica.es/politica-privacidad-app`
+- `novicell.es/legal/fetroapp-privacy`
 - `novicell.es/politica-privacidad-fetroapp`
-- Cualquier subpágina pública con TLS
+- Cualquier subpágina pública de Novicell con TLS
 
 La URL es **obligatoria** para Play Store y se introduce al crear la app en Play Console.
 
@@ -100,7 +100,7 @@ Coste **una sola vez de 25 USD**. Requiere:
 - Cuenta de empresa o personal.
 - Datos fiscales si se va a publicar app de pago (no es nuestro caso).
 
-Mejor **cuenta de empresa** (Fatro o Novicell) en lugar de personal — facilita la transferencia futura si Jorge cambia de proyecto.
+Mejor **cuenta de empresa de Novicell** en lugar de personal — facilita la transferencia futura si Jorge cambia de proyecto y deja claro que el responsable es la empresa.
 
 ---
 
