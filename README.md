@@ -110,14 +110,22 @@ La app consume la REST API estándar de WordPress:
 - [x] Home con listado de noticias (pull-to-refresh + scroll infinito)
 - [x] Detalle de post con renderizado HTML nativo
 - [x] Categorías con jerarquía y filtrado de posts
-- [ ] Listado de productos (CPT)
-- [ ] Búsqueda global
+- [x] Listado de productos (CPT) y detalle
+- [x] Búsqueda global
 
-### Fase 2
-- [ ] Registro/Login de usuarios (JWT)
-- [ ] Inscripción en formaciones
-- [ ] Registro en carreras (VetSICS)
-- [ ] Perfil de usuario con historial
+### Fase 2 (autenticación y área privada)
+- [x] Registro, login, recuperación de contraseña y baja de cuenta
+- [x] Perfil de usuario editable
+- [x] Formaciones (listado, detalle, calendario)
+- [x] Carreras VetSICS (listado y detalle)
+- [x] Consultas a especialistas
+- [x] Solicitudes de promociones e inscripción a carreras VetSICS (formulario web en WebView con la sesión ya iniciada)
+- [x] Asistencias y Mis solicitudes
+- [x] Favoritos locales por usuario
+- [x] Escaneo de códigos QR
+
+### Pendiente
+- [ ] Publicación en Google Play (ver `docs/play-store-checklist.md`)
 
 ## Despliegue
 

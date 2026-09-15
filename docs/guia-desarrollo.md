@@ -785,11 +785,11 @@ const handleInscribirme = () => {
 };
 ```
 
-Cuando integremos el formulario real, esto se sustituirá por `navigation.navigate('VetsicsInscripcion', { raceId, formId })`.
+**Actualización (sept. 2026)**: el CTA ya abre el formulario real. Es un Contact Form 7 que vive en la página pública de la carrera (`guid`), y se abre en un WebView con la sesión iniciada. Ver la sección 30.
 
 ### Pendiente para la siguiente iteración
 
-- **Formulario real de inscripción**: el backend expone `id_formulario` por carrera. Hay que investigar qué endpoint del plugin consume ese form y qué campos espera.
+- ~~**Formulario real de inscripción**~~: resuelto vía WebView con SSO (sección 30). `id_formulario` resultó ser el ID del CF7 embebido en la página de la carrera, no un endpoint del plugin.
 - **Refactor del bottom tab bar**: ya tenemos 7 pestañas. Cuando añadamos Consultas y Solicitudes vamos a ir a 9. Hay que agruparlas en un hub "Más" (hay un `TODO` en `navigation/types.ts`).
 - **Imágenes fallback**: algunas carreras antiguas no tienen `thumb_url` ni `app_img`. Ahora mostramos un placeholder con emoji 🏃, pero convendría una imagen genérica de marca.
 
@@ -1141,6 +1141,8 @@ const handleSolicitar = () => {
 ```
 
 Cuando el backend exponga un endpoint `submit_solicitud` o cuando un producto futuro justifique el esfuerzo, migramos a un formulario nativo. Por ahora el MVP está en la calle y los usuarios pueden solicitar.
+
+**Actualización (sept. 2026)**: el handoff ya no va al navegador externo sino a un WebView dentro de la app con la sesión iniciada, así que el formulario llega pre-rellenado y no pide contraseña. Ver la sección 30.
 
 ### El bug de los "nnnnn" en `more_info`
 
@@ -2251,3 +2253,28 @@ Si mañana aparece un `qr_type` nuevo, se pinta con emoji genérico 🔖 y color
 - **Fallback manual gratis**. Cuando la UX depende de hardware (cámara, GPS, micrófono), siempre ofrecer una alternativa manual. Resuelve permisos denegados, entornos limitados y accesibilidad.
 - **`navigation.replace` para flujos transitorios**. Cuando una pantalla no tiene sentido volver atrás (scanner → detalle), `replace` mantiene la pila limpia.
 - **Plugins de Expo en `app.json` > parcheos manuales**. Toda librería de Expo que requiera permisos nativos tiene un plugin de config que los inyecta en el build. Usarlo siempre en lugar de editar `Info.plist`/`AndroidManifest.xml` a mano.
+
+## 30. SSO móvil → web: formularios CF7 en WebView con la cookie del plugin
+
+### El contexto
+
+Dos flujos terminaban en un formulario Contact Form 7 de la web: la inscripción a carreras VetSICS (`id_formulario`) y las solicitudes de promociones. La guía (secciones 18 y 21) había decidido no replicarlos nativamente y abrir el navegador externo, con el coste de que WordPress pedía usuario y contraseña otra vez.
+
+### El descubrimiento
+
+La cookie que devuelve `generate_auth_cookie` del plugin `json-api-user` no es un token propio: el plugin llama a `wp_generate_auth_cookie($user_id, $expiration, 'logged_in')`, es decir, devuelve **el mismo valor** que WordPress guarda en su cookie `wordpress_logged_in_<hash>`. El `<hash>` es `COOKIEHASH = md5(siteurl)`.
+
+Comprobado con `curl` contra producción y staging: enviando `Cookie: wordpress_logged_in_dd4a937d1d668744f525e0b185ac4cf4=<cookie del plugin>` la página de una solicitud deja de mostrar el login y aparece el enlace de cerrar sesión. Staging conserva el `siteurl` de producción (`https://fatroiberica.es`), así que el hash vale para ambos.
+
+### La implementación
+
+- `services/webSession.ts`: el hash, el nombre de la cookie, la cabecera `Cookie` para la primera petición y el script que la deja en `document.cookie` para las navegaciones siguientes (envío del formulario incluido). También `normalizeWebUrl`, porque los `guid` del plugin vienen con `&#038;` y, sin decodificar, el `#` convertía el resto de la query en fragmento y se abría el listado en vez del post. Ese bug existía ya en el handoff al navegador.
+- `screens/WebFormScreen.tsx`: ruta `WebForm { url, title? }` con `react-native-webview`. Spinner mientras carga, `ErrorState` con reintento si falla, y los enlaces fuera del dominio de Fatro se abren en el navegador externo.
+- `VetsicsDetailScreen` y `SolicitudDetailScreen` navegan a `WebForm` con el `guid`. En web (sin WebView) siguen abriendo pestaña nueva.
+- VetSICS respeta además el meta `form_disabled` (helper `isFormDisabled`) y deshabilita el botón si no hay `guid`.
+
+### Limitaciones conocidas
+
+- **Web**: no hay WebView en React Native Web, así que el SSO solo aplica a Android/iOS.
+- **Logout**: no borramos el jar de cookies del WebView (haría falta `@react-native-cookies/cookies`, que no funciona en Expo Go). No es un problema real: el valor lleva su caducidad firmada, WP lo rechaza cuando expira, y en cada apertura inyectamos la cookie de la sesión actual, que sobreescribe la anterior.
+- **Si cambia el `siteurl`** de WordPress, el hash deja de coincidir y el WebView mostrará el login. Recalcular con `printf 'https://fatroiberica.es' | md5sum` y actualizar `WP_COOKIE_HASH`.
