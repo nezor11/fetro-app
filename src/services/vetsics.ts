@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { postPlugin } from './pluginApi';
 
 /**
  * Servicio de Carreras VetSICS.
@@ -10,11 +9,6 @@ import { Platform } from 'react-native';
  *
  * Requiere autenticación: todas las peticiones necesitan una cookie válida.
  */
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
 
 /**
  * Entrada del array `meta` de una carrera. WordPress devuelve pares
@@ -189,19 +183,16 @@ export function isSoldOut(race: VetsicsRace): boolean {
  * Lista las carreras VetSICS. Requiere cookie válida.
  */
 export async function getVetsicsRaces(cookie: string): Promise<VetsicsRace[]> {
-  const response = await axios.get<VetsicsResponse>(
-    `${BASE_URL}/api/user/get_vetsics/`,
-    {
-      params: { cookie, insecure: 'cool' },
-      timeout: 15000,
-    }
+  const data = await postPlugin<VetsicsResponse>(
+    '/api/user/get_vetsics/',
+    { cookie }
   );
 
-  if (response.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('Error al obtener carreras VetSICS');
   }
 
-  return response.data.forms || [];
+  return data.forms || [];
 }
 
 /**

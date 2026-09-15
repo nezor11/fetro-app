@@ -20,11 +20,15 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function LoginScreen() {
   const navigation = useNavigation<Nav>();
-  const { login } = useAuth();
+  const { login, sessionMessage, clearSessionMessage } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Si llegamos aquí porque la sesión caducó, AuthContext deja el aviso
+  // en `sessionMessage`; lo mostramos en la misma caja que los errores.
+  const notice = error ?? sessionMessage;
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -32,6 +36,7 @@ export default function LoginScreen() {
       return;
     }
     setError(null);
+    clearSessionMessage();
     setLoading(true);
     try {
       await login(email.trim(), password);
@@ -59,9 +64,9 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <Text style={styles.title}>Iniciar sesión</Text>
 
-          {error && (
+          {notice && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{notice}</Text>
             </View>
           )}
 

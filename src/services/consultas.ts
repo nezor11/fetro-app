@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { postPlugin } from './pluginApi';
 
 /**
  * Servicio de Consultas veterinarias.
@@ -16,11 +15,6 @@ import { Platform } from 'react-native';
  *
  * Requiere autenticación: todas las peticiones necesitan una cookie válida.
  */
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
 
 /**
  * Ficha de un especialista tal y como viene del backend.
@@ -170,15 +164,12 @@ export function findSpecialistBySlug(
 export async function getSpecialities(
   cookie: string
 ): Promise<SpecialitiesMap> {
-  const res = await axios.get<SpecialitiesResponse>(
-    `${BASE_URL}/api/user/get_specialities/`,
-    {
-      params: { cookie },
-      timeout: 15000,
-    }
+  const data = await postPlugin<SpecialitiesResponse>(
+    '/api/user/get_specialities/',
+    { cookie }
   );
-  if (res.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('No se pudieron cargar las consultas');
   }
-  return res.data.specialities ?? {};
+  return data.specialities ?? {};
 }

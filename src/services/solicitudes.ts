@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { postPlugin } from './pluginApi';
 
 /**
  * Servicio de Solicitudes.
@@ -25,11 +24,6 @@ import { Platform } from 'react-native';
  * cuando implementemos un parser CF7 con los sabores que realmente
  * usamos, se podrá migrar a un flujo 100% nativo.
  */
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
 
 export interface SolicitudMeta {
   tag: string;
@@ -227,17 +221,14 @@ export function sanitizeSolicitudHtml(html: string): string {
  * un fallo real de una lista vacía legítima.
  */
 export async function getSolicitudes(cookie: string): Promise<Solicitud[]> {
-  const res = await axios.get<SolicitudesResponse>(
-    `${BASE_URL}/api/user/get_solicitudes/`,
-    {
-      params: { cookie },
-      timeout: 15000,
-    }
+  const data = await postPlugin<SolicitudesResponse>(
+    '/api/user/get_solicitudes/',
+    { cookie }
   );
-  if (res.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('No se pudieron cargar las solicitudes');
   }
-  return res.data.forms ?? [];
+  return data.forms ?? [];
 }
 
 /**

@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { postPlugin } from './pluginApi';
 
 /**
  * Servicio de QR codes.
@@ -21,11 +20,6 @@ import { Platform } from 'react-native';
  * - Sin identifier → lista todos los QR disponibles (~90 actualmente)
  * - Con identifier → devuelve el QR concreto (count 0 o 1)
  */
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
 
 export interface QRCodeMeta {
   tag: string;
@@ -122,18 +116,15 @@ export async function getQRCodeByIdentifier(
   cookie: string,
   identifier: string
 ): Promise<QRCode | null> {
-  const res = await axios.get<QRCodesResponse>(
-    `${BASE_URL}/api/user/get_qrcodes/`,
-    {
-      params: { cookie, identifier: identifier.trim() },
-      timeout: 15000,
-    }
+  const data = await postPlugin<QRCodesResponse>(
+    '/api/user/get_qrcodes/',
+    { cookie, identifier: identifier.trim() }
   );
 
-  if (res.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('Error consultando el QR en el servidor');
   }
-  const list = res.data.forms ?? [];
+  const list = data.forms ?? [];
   return list.length > 0 ? list[0] : null;
 }
 
@@ -144,12 +135,12 @@ export async function getQRCodeByIdentifier(
  * dejamos listo para cuando el equipo valide el flujo.
  */
 export async function getAllQRCodes(cookie: string): Promise<QRCode[]> {
-  const res = await axios.get<QRCodesResponse>(
-    `${BASE_URL}/api/user/get_qrcodes/`,
-    { params: { cookie }, timeout: 15000 }
+  const data = await postPlugin<QRCodesResponse>(
+    '/api/user/get_qrcodes/',
+    { cookie }
   );
-  if (res.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('No se pudieron cargar los QR codes');
   }
-  return res.data.forms ?? [];
+  return data.forms ?? [];
 }

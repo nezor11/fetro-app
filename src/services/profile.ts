@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { postPlugin } from './pluginApi';
 
 /**
  * Servicio de perfil del usuario.
@@ -26,11 +25,6 @@ import { Platform } from 'react-native';
  * Así tocamos el servidor un mínimo de veces y respetamos la API del
  * plugin sin hacks.
  */
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
 
 /**
  * Perfil normalizado que consume la UI. Son exactamente los campos que
@@ -88,25 +82,25 @@ function flattenMeta(value: unknown): string {
 }
 
 export async function getProfile(cookie: string): Promise<UserProfile> {
-  const res = await axios.get<GetUserMetaResponse>(
-    `${BASE_URL}/api/user/get_user_meta/`,
-    { params: { cookie }, timeout: 15000 }
+  const data = await postPlugin<GetUserMetaResponse>(
+    '/api/user/get_user_meta/',
+    { cookie }
   );
 
-  if (res.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('No se pudo cargar el perfil');
   }
 
   return {
-    firstName: flattenMeta(res.data.first_name),
-    lastName: flattenMeta(res.data.last_name),
-    lastName2: flattenMeta(res.data.last_name2),
-    phone: flattenMeta(res.data.phone),
-    company: flattenMeta(res.data.company),
-    direccion: flattenMeta(res.data.direccion),
-    cp: flattenMeta(res.data.cp),
-    city: flattenMeta(res.data.city),
-    description: flattenMeta(res.data.description),
+    firstName: flattenMeta(data.first_name),
+    lastName: flattenMeta(data.last_name),
+    lastName2: flattenMeta(data.last_name2),
+    phone: flattenMeta(data.phone),
+    company: flattenMeta(data.company),
+    direccion: flattenMeta(data.direccion),
+    cp: flattenMeta(data.cp),
+    city: flattenMeta(data.city),
+    description: flattenMeta(data.description),
   };
 }
 
@@ -126,28 +120,23 @@ export async function updateProfile(
 ): Promise<void> {
   // 1. Campos custom de Fatro (y description, que es core pero lo
   //    acepta update_user_meta_vars directamente).
-  const metaVars = new URLSearchParams();
-  metaVars.append('cookie', cookie);
-  metaVars.append('last_name2', profile.lastName2);
-  metaVars.append('phone', profile.phone);
-  metaVars.append('company', profile.company);
-  metaVars.append('direccion', profile.direccion);
-  metaVars.append('cp', profile.cp);
-  metaVars.append('city', profile.city);
-  metaVars.append('description', profile.description);
-
-  const metaRes = await axios.post(
-    `${BASE_URL}/api/user/update_user_meta_vars/`,
-    metaVars.toString(),
+  const metaData = await postPlugin<{ status?: string; error?: string }>(
+    '/api/user/update_user_meta_vars/',
     {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: 15000,
+      cookie,
+      last_name2: profile.lastName2,
+      phone: profile.phone,
+      company: profile.company,
+      direccion: profile.direccion,
+      cp: profile.cp,
+      city: profile.city,
+      description: profile.description,
     }
   );
 
-  if (metaRes.data.status && metaRes.data.status !== 'ok') {
+  if (metaData.status && metaData.status !== 'ok') {
     throw new Error(
-      metaRes.data.error || 'Error al guardar los datos de contacto'
+      metaData.error || 'Error al guardar los datos de contacto'
     );
   }
 
@@ -168,21 +157,12 @@ async function updateSingleMeta(
   // mandamos un espacio para "limpiar" (alternativa: usar
   // delete_user_meta, pero se complica innecesariamente).
   const safeValue = value.trim() || ' ';
-  const body = new URLSearchParams();
-  body.append('cookie', cookie);
-  body.append('meta_key', key);
-  body.append('meta_value', safeValue);
-
-  const res = await axios.post(
-    `${BASE_URL}/api/user/update_user_meta/`,
-    body.toString(),
-    {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: 15000,
-    }
+  const data = await postPlugin<{ status?: string; error?: string }>(
+    '/api/user/update_user_meta/',
+    { cookie, meta_key: key, meta_value: safeValue }
   );
 
-  if (res.data.status === 'error') {
-    throw new Error(res.data.error || `Error al guardar ${key}`);
+  if (data.status === 'error') {
+    throw new Error(data.error || `Error al guardar ${key}`);
   }
 }

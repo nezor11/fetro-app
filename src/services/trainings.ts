@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { postPlugin } from './pluginApi';
 
 /**
  * Servicio de Formaciones (webinars/formaciones veterinarias).
@@ -9,11 +8,6 @@ import { Platform } from 'react-native';
  *
  * Requiere autenticación: todas las peticiones necesitan una cookie válida.
  */
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
 
 /**
  * Entrada del array `meta` de una formación.
@@ -187,19 +181,16 @@ export function isUserRegisteredInTraining(
  * Requiere cookie válida del usuario autenticado.
  */
 export async function getTrainings(cookie: string): Promise<Training[]> {
-  const response = await axios.get<TrainingsResponse>(
-    `${BASE_URL}/api/user/get_webinars_group/`,
-    {
-      params: { cookie, insecure: 'cool' },
-      timeout: 15000,
-    }
+  const data = await postPlugin<TrainingsResponse>(
+    '/api/user/get_webinars_group/',
+    { cookie }
   );
 
-  if (response.data.status !== 'ok') {
+  if (data.status !== 'ok') {
     throw new Error('Error al obtener formaciones');
   }
 
-  return response.data.forms || [];
+  return data.forms || [];
 }
 
 /**

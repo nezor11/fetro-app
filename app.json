@@ -37,7 +37,8 @@
         {
           "cameraPermission": "FetroApp necesita acceso a la cámara para escanear códigos QR durante las pruebas."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

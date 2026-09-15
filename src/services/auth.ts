@@ -1,17 +1,13 @@
 import axios, { AxiosError } from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-/**
- * En web (Chrome), las peticiones al servidor de WordPress son bloqueadas
- * por CORS. Usamos un proxy local (proxy-server.js) que reenvía las
- * peticiones y añade las cabeceras CORS necesarias.
- * En móvil nativo no hay restricciones CORS, así que se usa la URL directa.
- */
-const AUTH_BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:3001'
-    : 'https://fatroibericas.sg-host.com';
+import * as SecureStore from 'expo-secure-store';
+import {
+  PLUGIN_BASE_URL,
+  postPlugin,
+  isNetworkError,
+  SessionExpiredError,
+} from './pluginApi';
 
 export interface UserData {
   id: number;
@@ -38,8 +34,55 @@ export interface RegisterResponse {
   user_id: number;
 }
 
-const STORAGE_KEY_COOKIE = '@fetro_auth_cookie';
+/**
+ * Claves de almacenamiento.
+ *
+ * - La cookie de sesión equivale a un token: se guarda en
+ *   `expo-secure-store` (Keychain en iOS, Keystore/EncryptedSharedPreferences
+ *   en Android). SecureStore no existe en web, así que ahí cae a
+ *   AsyncStorage (localStorage), igual que antes.
+ * - Los datos del usuario (nombre, email…) no son secretos y siguen en
+ *   AsyncStorage.
+ *
+ * `STORAGE_KEY_COOKIE_LEGACY` es la clave antigua en AsyncStorage. Al
+ * arrancar, si existe, se migra a SecureStore y se borra para que las
+ * sesiones abiertas antes de este cambio no se pierdan.
+ */
+const STORAGE_KEY_COOKIE = 'fetro_auth_cookie';
+const STORAGE_KEY_COOKIE_LEGACY = '@fetro_auth_cookie';
 const STORAGE_KEY_USER = '@fetro_auth_user';
+
+const canUseSecureStore = Platform.OS !== 'web';
+
+async function readCookie(): Promise<string | null> {
+  if (canUseSecureStore) {
+    const secure = await SecureStore.getItemAsync(STORAGE_KEY_COOKIE);
+    if (secure) return secure;
+    // Migración desde la clave antigua en AsyncStorage.
+    const legacy = await AsyncStorage.getItem(STORAGE_KEY_COOKIE_LEGACY);
+    if (legacy) {
+      await SecureStore.setItemAsync(STORAGE_KEY_COOKIE, legacy);
+      await AsyncStorage.removeItem(STORAGE_KEY_COOKIE_LEGACY);
+    }
+    return legacy;
+  }
+  return AsyncStorage.getItem(STORAGE_KEY_COOKIE_LEGACY);
+}
+
+async function writeCookie(cookie: string): Promise<void> {
+  if (canUseSecureStore) {
+    await SecureStore.setItemAsync(STORAGE_KEY_COOKIE, cookie);
+    return;
+  }
+  await AsyncStorage.setItem(STORAGE_KEY_COOKIE_LEGACY, cookie);
+}
+
+async function deleteCookie(): Promise<void> {
+  if (canUseSecureStore) {
+    await SecureStore.deleteItemAsync(STORAGE_KEY_COOKIE);
+  }
+  await AsyncStorage.removeItem(STORAGE_KEY_COOKIE_LEGACY);
+}
 
 /**
  * Handles network errors providing clear messages.
@@ -72,26 +115,21 @@ function handleNetworkError(err: unknown, action: string): never {
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
   try {
-    const formData = new URLSearchParams();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('insecure', 'cool');
-
-    const response = await axios.post(
-      `${AUTH_BASE_URL}/api/user/generate_auth_cookie/`,
-      formData.toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    const data = await postPlugin<LoginResponse & { error?: string }>(
+      '/api/user/generate_auth_cookie/',
+      { email, password },
+      10000
     );
 
-    if (response.data.status === 'error') {
-      throw new Error(response.data.error || 'Error al iniciar sesión');
+    if (data.status === 'error') {
+      throw new Error(data.error || 'Error al iniciar sesión');
     }
 
     // Persist cookie and user data
-    await AsyncStorage.setItem(STORAGE_KEY_COOKIE, response.data.cookie);
-    await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify(response.data.user));
+    await writeCookie(data.cookie);
+    await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
 
-    return response.data;
+    return data;
   } catch (err) {
     handleNetworkError(err, 'iniciar sesión');
   }
@@ -105,26 +143,24 @@ export async function register(
   nonce: string
 ): Promise<RegisterResponse> {
   try {
-    const formData = new URLSearchParams();
-    formData.append('username', username);
-    formData.append('email', email);
-    formData.append('user_pass', password);
-    formData.append('display_name', displayName);
-    formData.append('nonce', nonce);
-    formData.append('insecure', 'cool');
-    formData.append('notify', 'both');
-
-    const response = await axios.post(
-      `${AUTH_BASE_URL}/api/user/register/`,
-      formData.toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    const data = await postPlugin<RegisterResponse & { error?: string }>(
+      '/api/user/register/',
+      {
+        username,
+        email,
+        user_pass: password,
+        display_name: displayName,
+        nonce,
+        notify: 'both',
+      },
+      10000
     );
 
-    if (response.data.status === 'error') {
-      throw new Error(response.data.error || 'Error al registrarse');
+    if (data.status === 'error') {
+      throw new Error(data.error || 'Error al registrarse');
     }
 
-    return response.data;
+    return data;
   } catch (err) {
     handleNetworkError(err, 'registrarse');
   }
@@ -133,7 +169,7 @@ export async function register(
 export async function getNonce(): Promise<string> {
   try {
     const response = await axios.get(
-      `${AUTH_BASE_URL}/api/get_nonce/?controller=user&method=register&insecure=cool`
+      `${PLUGIN_BASE_URL}/api/get_nonce/?controller=user&method=register&insecure=cool`
     );
     return response.data.nonce;
   } catch (err) {
@@ -141,56 +177,108 @@ export async function getNonce(): Promise<string> {
   }
 }
 
-export async function validateCookie(cookie: string): Promise<boolean> {
+/**
+ * Resultado de validar la cookie contra el servidor:
+ *
+ * - `valid`       → el servidor confirma que la sesión sigue viva.
+ * - `invalid`     → el servidor responde y dice que NO es válida
+ *                   (caducada, usuario dado de baja…).
+ * - `unreachable` → no hemos podido preguntar (sin red, timeout,
+ *                   servidor caído). No sabemos nada de la cookie.
+ *
+ * Distinguirlo importa: antes cualquier fallo se trataba como
+ * `invalid` y arrancar la app sin cobertura cerraba la sesión.
+ */
+export type CookieValidation = 'valid' | 'invalid' | 'unreachable';
+
+export async function validateCookie(cookie: string): Promise<CookieValidation> {
   try {
-    const response = await axios.get(
-      `${AUTH_BASE_URL}/api/user/validate_auth_cookie/?cookie=${encodeURIComponent(cookie)}&insecure=cool`
+    const data = await postPlugin<{ status?: string; valid?: boolean }>(
+      '/api/user/validate_auth_cookie/',
+      { cookie },
+      10000
     );
-    return response.data.status === 'ok' && response.data.valid === true;
-  } catch {
-    return false;
+    return data.status === 'ok' && data.valid === true ? 'valid' : 'invalid';
+  } catch (err) {
+    if (err instanceof SessionExpiredError) return 'invalid';
+    if (isNetworkError(err)) return 'unreachable';
+    // Respuesta HTTP de error (500, 404…) o body inesperado: tampoco
+    // sabemos si la cookie es válida. Conservamos la sesión.
+    return 'unreachable';
   }
 }
 
-export async function getStoredAuth(): Promise<{ cookie: string; user: UserData } | null> {
+export interface StoredAuthResult {
+  auth: { cookie: string; user: UserData } | null;
+  /**
+   * `true` cuando había una sesión guardada pero el servidor la ha
+   * rechazado. Permite avisar al usuario de que debe volver a entrar,
+   * en vez de mostrarle el login sin explicación.
+   */
+  expired: boolean;
+}
+
+/**
+ * Recupera la sesión guardada. Solo se descarta si el servidor confirma
+ * que la cookie ya no es válida; si no hay red, se devuelve la sesión
+ * tal cual para que la app arranque offline con la caché que tenga.
+ */
+export async function getStoredAuth(): Promise<StoredAuthResult> {
+  let cookie: string | null = null;
+  let userStr: string | null = null;
   try {
-    const cookie = await AsyncStorage.getItem(STORAGE_KEY_COOKIE);
-    const userStr = await AsyncStorage.getItem(STORAGE_KEY_USER);
-    if (cookie && userStr) {
-      const isValid = await validateCookie(cookie);
-      if (isValid) {
-        return { cookie, user: JSON.parse(userStr) };
-      }
-    }
-  } catch {}
-  await clearAuth();
-  return null;
+    cookie = await readCookie();
+    userStr = await AsyncStorage.getItem(STORAGE_KEY_USER);
+  } catch {
+    // Storage corrupto o inaccesible: tratamos como "sin sesión".
+  }
+
+  if (!cookie || !userStr) {
+    await clearAuth();
+    return { auth: null, expired: false };
+  }
+
+  let user: UserData;
+  try {
+    user = JSON.parse(userStr);
+  } catch {
+    await clearAuth();
+    return { auth: null, expired: false };
+  }
+
+  const validation = await validateCookie(cookie);
+  if (validation === 'invalid') {
+    await clearAuth();
+    return { auth: null, expired: true };
+  }
+  return { auth: { cookie, user }, expired: false };
 }
 
 export async function retrievePassword(email: string): Promise<string> {
   try {
-    const formData = new URLSearchParams();
-    formData.append('user_login', email);
-    formData.append('insecure', 'cool');
-
-    const response = await axios.post(
-      `${AUTH_BASE_URL}/api/user/retrieve_password/`,
-      formData.toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    const data = await postPlugin<{ status: string; error?: string; msg?: string }>(
+      '/api/user/retrieve_password/',
+      { user_login: email },
+      10000
     );
 
-    if (response.data.status === 'error') {
-      throw new Error(response.data.error || 'Error al enviar el correo de recuperación');
+    if (data.status === 'error') {
+      throw new Error(data.error || 'Error al enviar el correo de recuperación');
     }
 
-    return response.data.msg || 'Se ha enviado un enlace de recuperación a tu correo electrónico.';
+    return data.msg || 'Se ha enviado un enlace de recuperación a tu correo electrónico.';
   } catch (err) {
     handleNetworkError(err, 'recuperar contraseña');
   }
 }
 
 export async function clearAuth(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY_COOKIE);
+  try {
+    await deleteCookie();
+  } catch {
+    // SecureStore puede fallar en entornos raros; no bloqueamos el
+    // logout por ello.
+  }
   await AsyncStorage.removeItem(STORAGE_KEY_USER);
 }
 
@@ -211,25 +299,20 @@ export async function clearAuth(): Promise<void> {
  *
  * No hace `wp_logout_user` server-side, así que técnicamente la
  * cookie de WP sigue siendo válida hasta su expiración — pero al
- * borrarla de AsyncStorage nadie puede volver a usarla desde la app.
+ * borrarla del almacenamiento nadie puede volver a usarla desde la app.
  */
 export async function unsubscribeAccount(cookie: string): Promise<void> {
   try {
-    const response = await axios.get(
-      `${AUTH_BASE_URL}/api/user/unsubscribe_account/`,
-      { params: { cookie, insecure: 'cool' }, timeout: 15000 }
+    const data = await postPlugin<any>(
+      '/api/user/unsubscribe_account/',
+      { cookie }
     );
 
     // El endpoint devuelve `true` directo en el body (no un objeto
     // `{status, ...}` como otros endpoints del plugin). Aceptamos
     // tanto `true` como `{status:'ok'}` por si cambian la forma.
-    if (
-      response.data !== true &&
-      response.data?.status !== 'ok'
-    ) {
-      throw new Error(
-        response.data?.error || 'No se pudo dar de baja la cuenta'
-      );
+    if (data !== true && data?.status !== 'ok') {
+      throw new Error(data?.error || 'No se pudo dar de baja la cuenta');
     }
   } catch (err) {
     handleNetworkError(err, 'dar de baja la cuenta');

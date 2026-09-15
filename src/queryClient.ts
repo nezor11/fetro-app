@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { SessionExpiredError } from './services/pluginApi';
 
 /**
  * Cliente global de TanStack Query compartido por toda la app.
@@ -31,7 +32,10 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
-      retry: 1,
+      // Un reintento salvo si el backend ha rechazado la cookie: en ese
+      // caso AuthContext ya está cerrando la sesión y repetir es ruido.
+      retry: (failureCount, error) =>
+        !(error instanceof SessionExpiredError) && failureCount < 1,
       refetchOnWindowFocus: false,
     },
   },
