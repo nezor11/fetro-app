@@ -92,15 +92,15 @@ Validar el borrador (`docs/privacy-policy-draft.md`) con DPO de Novicell y publi
 
 La URL es **obligatoria** para Play Store y se introduce al crear la app en Play Console.
 
-### Decisión 5 · Cuenta Google Play Console
+### Decisión 5 · Cuenta Google Play Console → ✅ cuenta personal de Jorge (2026-09-15)
 
-Coste **una sola vez de 25 USD**. Requiere:
+Se descarta esperar a una cuenta de empresa de Novicell: se publica desde la cuenta personal de Jorge (`martinezortiz@gmail.com`). Coste único de 25 USD y verificación de identidad (DNI/pasaporte).
 
-- Verificación de identidad (DNI/pasaporte) desde 2023.
-- Cuenta de empresa o personal.
-- Datos fiscales si se va a publicar app de pago (no es nuestro caso).
+Consecuencias a tener en cuenta:
 
-Mejor **cuenta de empresa de Novicell** en lugar de personal — facilita la transferencia futura si Jorge cambia de proyecto y deja claro que el responsable es la empresa.
+- El "desarrollador" visible en la ficha será el nombre de esa cuenta, no Novicell.
+- La política de privacidad debe ser coherente con quién figura como responsable. Si sigue siendo Novicell, hay que indicar en la ficha que la app se publica en su nombre; si pasa a ser Jorge, hay que reescribir el bloque 1 del borrador.
+- Google permite transferir la app a otra cuenta más adelante (formulario de transferencia), así que no es una decisión irreversible.
 
 ---
 
@@ -109,9 +109,9 @@ Mejor **cuenta de empresa de Novicell** en lugar de personal — facilita la tra
 - [ ] Iconos finales (branding real).
 - [ ] Screenshots y feature graphic.
 - [ ] Política de privacidad publicada en URL pública.
-- [ ] Cuenta de Google Play Console creada y verificada.
-- [ ] Cuestionario **Data Safety** completado en Play Console (qué datos recoges, si los compartes, si los cifras en tránsito).
-- [ ] Cuestionario **Content Rating** completado (PEGI 3 esperado para esta app).
+- [ ] Cuenta de Google Play Console creada y verificada (cuenta personal de Jorge, ver Decisión 5).
+- [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).
+- [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
 - [ ] Build de **producción** lanzado: `eas build --profile production --platform android` → genera AAB.
 - [ ] Subida automática del AAB con `eas submit --profile production --platform android` (requiere configurar service account de Google Play Developer API).
 
@@ -130,14 +130,13 @@ Google Play Console tiene 4 canales:
 
 ---
 
-## 📅 Timeline estimado (sin tener todavía las decisiones de Marcelo)
+## 📅 Timeline estimado (actualizado 2026-09-15, cuenta personal)
 
 | Fase | Duración estimada | Bloqueante |
 |---|---|---|
-| Reunión Marcelo + decisiones | 1 hora | ⚠️ falta agendar |
 | Iconos finales | 1-2 días | Diseñador |
-| Política de privacidad publicada | 1 día | DPO + diseño página |
-| Cuenta Play Console + verificación | 1-3 días | Marcelo administrativo |
+| Política de privacidad publicada | 1 hora | Decidir responsable y completar placeholders; puede servirse desde GitHub Pages del repo |
+| Cuenta Play Console + verificación | 1-3 días | Jorge (verificación de identidad de Google) |
 | Screenshots + feature graphic | 2-4 horas | Tras tener iconos |
 | Configuración Play Console + Data Safety | 2-3 horas | Tras cuenta creada |
 | Subida internal testing | 30 min | Tras todo lo anterior |
