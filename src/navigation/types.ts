@@ -15,6 +15,8 @@ export type RootStackParamList = {
   Unsubscribe: undefined;
   QRScan: undefined;
   QRDetail: { identifier: string };
+  /** Página del WordPress abierta con la sesión del usuario (ver WebFormScreen). */
+  WebForm: { url: string; title?: string };
 };
 
 /**

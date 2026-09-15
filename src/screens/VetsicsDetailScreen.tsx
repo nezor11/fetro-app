@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   useWindowDimensions,
-  Alert,
   Platform,
 } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RenderHtml from 'react-native-render-html';
 import {
   getVetsicsRaces,
@@ -20,7 +20,9 @@ import {
   getRaceDistances,
   getRaceDate,
   isSoldOut,
+  isFormDisabled,
 } from '../services/vetsics';
+import { normalizeWebUrl } from '../services/webSession';
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/ErrorState';
 import { queryKeys } from '../queryClient';
@@ -30,6 +32,7 @@ import { COLORS, FONTS, SPACING } from '../constants/theme';
 import FavoriteButton from '../components/FavoriteButton';
 
 type VetsicsDetailRoute = RouteProp<RootStackParamList, 'VetsicsDetail'>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 function decodeHtml(text: string): string {
   return text
@@ -52,6 +55,7 @@ function formatDate(date: Date): string {
 
 export default function VetsicsDetailScreen() {
   const route = useRoute<VetsicsDetailRoute>();
+  const navigation = useNavigation<Nav>();
   const { width } = useWindowDimensions();
   const { cookie } = useAuth();
   const {
@@ -109,22 +113,27 @@ export default function VetsicsDetailScreen() {
   const practical = getMetaValue(race.meta, 'practical_information');
   const contacts = getMetaValue(race.meta, 'contact_people');
   const categories = getMetaArray(race.meta, 'category');
-  const idFormulario = getMetaValue(race.meta, 'id_formulario');
+
+  /**
+   * La inscripción es un formulario Contact Form 7 que vive en la página
+   * pública de la carrera (`guid`). Se abre dentro de la app con la
+   * sesión iniciada (ver `WebFormScreen`), así llega pre-rellenado con
+   * los datos del perfil. En web no hay WebView: pestaña nueva.
+   */
+  const formDisabled = isFormDisabled(race);
+  const formUrl = race.guid ? normalizeWebUrl(race.guid) : null;
+  const canRegister = !soldOut && !formDisabled && formUrl !== null;
 
   const handleInscribirme = () => {
-    if (soldOut) return;
-    // TODO: integrar con el endpoint de inscripción real del plugin.
-    // El formulario del backend se identifica por `id_formulario`.
-    const title = 'Inscripción';
-    const message = `Próximamente: inscripción online para "${decodeHtml(
-      race.post_title
-    )}" (form #${idFormulario}).`;
+    if (!canRegister || !formUrl) return;
     if (Platform.OS === 'web') {
-      // Alert.alert de react-native no funciona en web; usamos el del navegador.
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
+      window.open(formUrl, '_blank');
+      return;
     }
+    navigation.navigate('WebForm', {
+      url: formUrl,
+      title: decodeHtml(race.post_title),
+    });
   };
 
   return (
@@ -225,13 +234,17 @@ export default function VetsicsDetailScreen() {
         ) : null}
 
         <TouchableOpacity
-          style={[styles.ctaButton, soldOut && styles.ctaButtonDisabled]}
+          style={[styles.ctaButton, !canRegister && styles.ctaButtonDisabled]}
           onPress={handleInscribirme}
-          disabled={soldOut}
+          disabled={!canRegister}
           activeOpacity={0.8}
         >
           <Text style={styles.ctaButtonText}>
-            {soldOut ? 'Plazas agotadas' : btnText}
+            {soldOut
+              ? 'Plazas agotadas'
+              : canRegister
+                ? btnText
+                : 'Inscripción no disponible'}
           </Text>
         </TouchableOpacity>
       </View>

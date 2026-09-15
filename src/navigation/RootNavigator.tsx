@@ -14,6 +14,7 @@ import MyRequestsScreen from '../screens/MyRequestsScreen';
 import UnsubscribeScreen from '../screens/UnsubscribeScreen';
 import QRScanScreen from '../screens/QRScanScreen';
 import QRDetailScreen from '../screens/QRDetailScreen';
+import WebFormScreen from '../screens/WebFormScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -107,6 +108,11 @@ export default function RootNavigator() {
             name="QRDetail"
             component={QRDetailScreen}
             options={{ title: 'Código escaneado' }}
+          />
+          <Stack.Screen
+            name="WebForm"
+            component={WebFormScreen}
+            options={({ route }) => ({ title: route.params.title ?? 'Formulario' })}
           />
         </>
       ) : (

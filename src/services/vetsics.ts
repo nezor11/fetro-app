@@ -32,6 +32,8 @@ export interface VetsicsRace {
   post_date: string;
   thumb_url: string;
   app_img: string | null;
+  /** URL pública del post en WP; ahí vive el formulario CF7 de inscripción. */
+  guid?: string;
   requested: string | number;
   meta: VetsicsMeta[];
 }
@@ -177,6 +179,16 @@ export function categorizeRaces(
 export function isSoldOut(race: VetsicsRace): boolean {
   const btnText = getMetaValue(race.meta, 'texto_boton_formulario').toLowerCase();
   return btnText.includes('agotad');
+}
+
+/**
+ * `form_disabled` lo activa el backend cuando la inscripción está
+ * cerrada aunque no se hayan agotado plazas (fecha pasada, carrera
+ * cancelada…). Formato observado: "0"/"1", pero aceptamos "true".
+ */
+export function isFormDisabled(race: VetsicsRace): boolean {
+  const raw = getMetaValue(race.meta, 'form_disabled').trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes';
 }
 
 /**

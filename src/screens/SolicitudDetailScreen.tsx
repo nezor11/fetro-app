@@ -7,13 +7,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   Platform,
-  Linking,
   useWindowDimensions,
 } from 'react-native';
 import RenderHtml from 'react-native-render-html';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   getSolicitudes,
   getMetaValue,
@@ -27,12 +26,14 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import ErrorState from '../components/ErrorState';
 import { queryKeys } from '../queryClient';
+import { normalizeWebUrl } from '../services/webSession';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
 type SolicitudDetailRoute = RouteProp<RootStackParamList, 'SolicitudDetail'>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 function decodeHtml(text: string): string {
   return text
@@ -56,6 +57,7 @@ function decodeHtml(text: string): string {
  */
 export default function SolicitudDetailScreen() {
   const route = useRoute<SolicitudDetailRoute>();
+  const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
   const { width } = useWindowDimensions();
   const {
@@ -116,32 +118,19 @@ export default function SolicitudDetailScreen() {
     getMetaValue(solicitud.meta, 'no_requiere_direccion') === '1';
 
   /**
-   * Abre el formulario web en el navegador externo. El usuario debería
-   * estar logueado allí también; si no lo está, WP le pedirá autenticarse.
-   * TODO: una vez implementemos SSO móvil-web con cookie compartida,
-   * podríamos abrir en WebView sin fricción de login.
+   * Abre el formulario web dentro de la app con la sesión del usuario ya
+   * iniciada (ver `WebFormScreen` y `services/webSession.ts`), así el
+   * CF7 aparece pre-rellenado sin pedir contraseña. En web no hay
+   * WebView: se abre en pestaña nueva y WP pedirá login si no lo hay.
    */
   const handleSolicitar = () => {
     if (!solicitud.guid) return;
-
-    const openUrl = () => Linking.openURL(solicitud.guid);
-
+    const url = normalizeWebUrl(solicitud.guid);
     if (Platform.OS === 'web') {
-      window.alert(
-        'El formulario se abrirá en una nueva pestaña. Si pide usuario y contraseña, inicia sesión con las mismas credenciales que usas en la app.'
-      );
-      window.open(solicitud.guid, '_blank');
+      window.open(url, '_blank');
       return;
     }
-
-    Alert.alert(
-      'Rellenar solicitud',
-      'El formulario se abre en tu navegador. Si te pide usuario y contraseña, inicia sesión con las mismas credenciales que usas aquí.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Abrir formulario', onPress: openUrl },
-      ]
-    );
+    navigation.navigate('WebForm', { url, title: 'Solicitud' });
   };
 
   return (
