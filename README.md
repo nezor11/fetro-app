@@ -66,6 +66,16 @@ FatroApp/
 
 ## API de WordPress
 
+### Entorno (producción vs. staging)
+
+Por defecto la app apunta al WordPress **de producción** (`https://fatroiberica.es`). Para desarrollar contra la copia de pruebas en SiteGround, define la variable pública de Expo antes de arrancar (también la lee `proxy-server.js`):
+
+```bash
+EXPO_PUBLIC_API_HOST=https://fatroibericas.sg-host.com npx expo start
+```
+
+O crea un `.env.local` (ignorado por git) con `EXPO_PUBLIC_API_HOST=https://fatroibericas.sg-host.com`. Ojo: contra producción, registrar usuarios o dar de baja cuentas afecta a datos reales.
+
 La app consume la REST API estándar de WordPress:
 
 | Endpoint | Descripción |

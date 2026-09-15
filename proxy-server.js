@@ -23,7 +23,15 @@ const http = require('http');
 const https = require('https');
 const url = require('url');
 
-const TARGET = 'https://fatroibericas.sg-host.com';
+/**
+ * Host de WordPress al que se reenvía. Por defecto producción; para
+ * apuntar a staging exporta la misma variable que usa la app:
+ *
+ *   EXPO_PUBLIC_API_HOST=https://fatroibericas.sg-host.com node proxy-server.js
+ */
+const TARGET = (
+  process.env.EXPO_PUBLIC_API_HOST || 'https://fatroiberica.es'
+).replace(/\/+$/, '');
 const PORT = 3001;
 
 const server = http.createServer((req, res) => {
