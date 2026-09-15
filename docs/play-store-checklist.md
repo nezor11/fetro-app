@@ -108,7 +108,7 @@ Consecuencias a tener en cuenta:
 - [x] Cuenta de Google Play Console creada (cuenta personal de Jorge, ver Decisión 5). Verificación pendiente a 2026-09-15.
 - [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).
 - [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
-- [ ] Build de **producción** lanzado: `eas build --profile production --platform android` → genera AAB.
+- [x] Build de **producción** lanzado el 2026-09-15 (build `55626f85`, versionCode 2, `com.jmtnez.fetroapp`): `eas build --profile production --platform android`.
 - [ ] Subida automática del AAB con `eas submit --profile production --platform android` (requiere configurar service account de Google Play Developer API).
 
 ---
