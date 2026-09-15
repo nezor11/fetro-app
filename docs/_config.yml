@@ -1,3 +1,13 @@
 title: FetroApp
 description: Documentación pública de FetroApp
 theme: jekyll-theme-minimal
+# Solo se publican la portada y la política de privacidad. El resto de
+# docs/ es documentación interna: se puede leer en GitHub, pero contiene
+# JSX con {{ }} que Liquid intenta interpretar y rompe el build.
+exclude:
+  - guia-desarrollo.md
+  - internal-testing-guide.md
+  - qa-checklist.md
+  - play-store-checklist.md
+  - play-console-questionnaires.md
+  - preview-splash.png
