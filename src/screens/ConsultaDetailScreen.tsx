@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,10 @@ import {
   getSpecialities,
   findSpecialistBySlug,
   getCategoryEmoji,
-  Specialist,
 } from '../services/consultas';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/ErrorState';
+import { queryKeys } from '../queryClient';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -27,41 +29,28 @@ type ConsultaDetailRoute = RouteProp<RootStackParamList, 'ConsultaDetail'>;
 
 /**
  * Pantalla de detalle de un especialista. Recibe `groupKey + slug` por
- * params y los resuelve contra una nueva llamada a `get_specialities`
- * (barata: el payload es pequeño). Se podría cachear en el futuro si la
- * lista crece mucho.
+ * params y los resuelve contra la misma query de `get_specialities`
+ * que usa el listado, así normalmente no hay petición extra.
  */
 export default function ConsultaDetailScreen() {
   const route = useRoute<ConsultaDetailRoute>();
   const { cookie } = useAuth();
-  const [specialist, setSpecialist] = useState<Specialist | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: specialist,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.consultas(cookie),
+    queryFn: () => getSpecialities(cookie!),
+    enabled: !!cookie,
+    // Misma query que el listado: si venimos de él, el detalle sale de
+    // caché sin volver a pedir nada al servidor.
+    select: (map) =>
+      findSpecialistBySlug(map, route.params.groupKey, route.params.slug),
+  });
 
-  useEffect(() => {
-    if (!cookie) return;
-    (async () => {
-      try {
-        const map = await getSpecialities(cookie);
-        const found = findSpecialistBySlug(
-          map,
-          route.params.groupKey,
-          route.params.slug
-        );
-        if (!found) {
-          setError('Especialista no encontrado');
-        } else {
-          setSpecialist(found);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Error al cargar el especialista');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [cookie, route.params.groupKey, route.params.slug]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -69,13 +58,24 @@ export default function ConsultaDetailScreen() {
     );
   }
 
-  if (error || !specialist) {
+  if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>
-          {error || 'Especialista no encontrado'}
-        </Text>
-      </View>
+      <ErrorState
+        title="No se pudo cargar el especialista"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  if (!specialist) {
+    return (
+      <ErrorState
+        title="Especialista no encontrado"
+        message="Puede que ya no esté disponible. Prueba a actualizar."
+        onRetry={refetch}
+        retryLabel="Actualizar"
+      />
     );
   }
 
@@ -226,11 +226,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
     backgroundColor: COLORS.background,
-  },
-  errorText: {
-    fontSize: FONTS.regular,
-    color: COLORS.error,
-    textAlign: 'center',
   },
   heroWrap: {
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,15 @@ import {
 import { useRoute, RouteProp } from '@react-navigation/native';
 import RenderHtml from 'react-native-render-html';
 import {
-  getTrainingById,
+  getTrainings,
   getMetaValue,
   getMetaArray,
   Training,
   TrainingSession,
 } from '../services/trainings';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/ErrorState';
+import { queryKeys } from '../queryClient';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -63,25 +66,21 @@ export default function TrainingDetailScreen() {
   const route = useRoute<TrainingDetailRoute>();
   const { width } = useWindowDimensions();
   const { cookie } = useAuth();
-  const [training, setTraining] = useState<Training | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: training,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.trainings(cookie),
+    queryFn: () => getTrainings(cookie!),
+    enabled: !!cookie,
+    // Misma query que el listado: si venimos de él, el detalle sale de
+    // caché sin volver a pedir nada al servidor.
+    select: (list) => list.find((t) => t.ID === route.params.trainingId) ?? null,
+  });
 
-  useEffect(() => {
-    if (!cookie) return;
-    (async () => {
-      try {
-        const t = await getTrainingById(cookie, route.params.trainingId);
-        setTraining(t);
-      } catch (err: any) {
-        setError(err.message || 'Error al cargar formación');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [cookie, route.params.trainingId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -89,11 +88,24 @@ export default function TrainingDetailScreen() {
     );
   }
 
-  if (error || !training) {
+  if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Formación no encontrada'}</Text>
-      </View>
+      <ErrorState
+        title="No se pudo cargar la formación"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  if (!training) {
+    return (
+      <ErrorState
+        title="Formación no encontrada"
+        message="Puede que ya no esté disponible. Prueba a actualizar."
+        onRetry={refetch}
+        retryLabel="Actualizar"
+      />
     );
   }
 
@@ -260,11 +272,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
     backgroundColor: COLORS.background,
-  },
-  errorText: {
-    fontSize: FONTS.regular,
-    color: COLORS.error,
-    textAlign: 'center',
   },
   hero: {
     width: '100%',

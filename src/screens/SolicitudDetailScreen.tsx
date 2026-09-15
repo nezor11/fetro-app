@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 import RenderHtml from 'react-native-render-html';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import {
-  getSolicitudById,
+  getSolicitudes,
   getMetaValue,
   getMetaArray,
   formatDatePromo,
@@ -24,6 +24,9 @@ import {
   sanitizeSolicitudHtml,
   Solicitud,
 } from '../services/solicitudes';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/ErrorState';
+import { queryKeys } from '../queryClient';
 import FavoriteButton from '../components/FavoriteButton';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
@@ -55,29 +58,21 @@ export default function SolicitudDetailScreen() {
   const route = useRoute<SolicitudDetailRoute>();
   const { cookie } = useAuth();
   const { width } = useWindowDimensions();
-  const [solicitud, setSolicitud] = useState<Solicitud | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: solicitud,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.solicitudes(cookie),
+    queryFn: () => getSolicitudes(cookie!),
+    enabled: !!cookie,
+    // Misma query que el listado: si venimos de él, el detalle sale de
+    // caché sin volver a pedir nada al servidor.
+    select: (list) => list.find((s) => String(s.ID) === String(route.params.solicitudId)) ?? null,
+  });
 
-  useEffect(() => {
-    if (!cookie) return;
-    (async () => {
-      try {
-        const s = await getSolicitudById(cookie, route.params.solicitudId);
-        if (!s) {
-          setError('Solicitud no encontrada');
-        } else {
-          setSolicitud(s);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Error al cargar la solicitud');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [cookie, route.params.solicitudId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -85,13 +80,24 @@ export default function SolicitudDetailScreen() {
     );
   }
 
-  if (error || !solicitud) {
+  if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>
-          {error || 'Solicitud no encontrada'}
-        </Text>
-      </View>
+      <ErrorState
+        title="No se pudo cargar la solicitud"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  if (!solicitud) {
+    return (
+      <ErrorState
+        title="Solicitud no encontrada"
+        message="Puede que ya no esté disponible. Prueba a actualizar."
+        onRetry={refetch}
+        retryLabel="Actualizar"
+      />
     );
   }
 
@@ -270,11 +276,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
     backgroundColor: COLORS.background,
-  },
-  errorText: {
-    fontSize: FONTS.regular,
-    color: COLORS.error,
-    textAlign: 'center',
   },
   hero: {
     width: '100%',

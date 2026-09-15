@@ -68,4 +68,6 @@ export const queryKeys = {
     ['posts', categoryId, page] as const,
   categories: () => ['categories'] as const,
   search: (query: string) => ['search', query] as const,
+  post: (id: number) => ['post', id] as const,
+  product: (id: number) => ['product', id] as const,
 };

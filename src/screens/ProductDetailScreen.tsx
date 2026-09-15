@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import {
 import { useRoute, RouteProp } from '@react-navigation/native';
 import RenderHtml from 'react-native-render-html';
 import { getProduct, WPProduct } from '../services/products';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/ErrorState';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 import FavoriteButton from '../components/FavoriteButton';
@@ -64,16 +67,15 @@ export default function ProductDetailScreen() {
   const route = useRoute<Route>();
   const { productId } = route.params;
   const { width } = useWindowDimensions();
-  const [product, setProduct] = useState<WPProduct | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getProduct(productId)
-      .then(setProduct)
-      .catch(() => setError('Error al cargar el producto'))
-      .finally(() => setLoading(false));
-  }, [productId]);
+  const {
+    data: product,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.product(productId),
+    queryFn: () => getProduct(productId),
+  });
 
   const onShare = async () => {
     if (!product) return;
@@ -84,7 +86,7 @@ export default function ProductDetailScreen() {
     } catch {}
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -92,11 +94,24 @@ export default function ProductDetailScreen() {
     );
   }
 
-  if (error || !product) {
+  if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error || 'Producto no encontrado'}</Text>
-      </View>
+      <ErrorState
+        title="No se pudo cargar el producto"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  if (!product) {
+    return (
+      <ErrorState
+        title="Producto no encontrado"
+        message="Puede que ya no esté disponible. Prueba a actualizar."
+        onRetry={refetch}
+        retryLabel="Actualizar"
+      />
     );
   }
 
@@ -200,10 +215,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.background,
-  },
-  errorText: {
-    fontSize: FONTS.regular,
-    color: COLORS.error,
   },
   imageContainer: {
     backgroundColor: COLORS.background,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,14 +14,16 @@ import {
 import { useRoute, RouteProp } from '@react-navigation/native';
 import RenderHtml from 'react-native-render-html';
 import {
-  getVetsicsRaceById,
+  getVetsicsRaces,
   getMetaValue,
   getMetaArray,
   getRaceDistances,
   getRaceDate,
   isSoldOut,
-  VetsicsRace,
 } from '../services/vetsics';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/ErrorState';
+import { queryKeys } from '../queryClient';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -52,25 +54,21 @@ export default function VetsicsDetailScreen() {
   const route = useRoute<VetsicsDetailRoute>();
   const { width } = useWindowDimensions();
   const { cookie } = useAuth();
-  const [race, setRace] = useState<VetsicsRace | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: race,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.vetsics(cookie),
+    queryFn: () => getVetsicsRaces(cookie!),
+    enabled: !!cookie,
+    // Misma query que el listado: si venimos de él, el detalle sale de
+    // caché sin volver a pedir nada al servidor.
+    select: (list) => list.find((r) => r.ID === route.params.raceId) ?? null,
+  });
 
-  useEffect(() => {
-    if (!cookie) return;
-    (async () => {
-      try {
-        const r = await getVetsicsRaceById(cookie, route.params.raceId);
-        setRace(r);
-      } catch (err: any) {
-        setError(err.message || 'Error al cargar carrera');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [cookie, route.params.raceId]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -78,11 +76,24 @@ export default function VetsicsDetailScreen() {
     );
   }
 
-  if (error || !race) {
+  if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Carrera no encontrada'}</Text>
-      </View>
+      <ErrorState
+        title="No se pudo cargar la carrera"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  if (!race) {
+    return (
+      <ErrorState
+        title="Carrera no encontrada"
+        message="Puede que ya no esté disponible. Prueba a actualizar."
+        onRetry={refetch}
+        retryLabel="Actualizar"
+      />
     );
   }
 
@@ -239,11 +250,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
     backgroundColor: COLORS.background,
-  },
-  errorText: {
-    fontSize: FONTS.regular,
-    color: COLORS.error,
-    textAlign: 'center',
   },
   hero: {
     width: '100%',

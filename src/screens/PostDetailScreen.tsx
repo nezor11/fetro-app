@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import {
 import { useRoute, RouteProp } from '@react-navigation/native';
 import RenderHtml from 'react-native-render-html';
 import { getPost, WPPost } from '../services/posts';
+import { useQuery } from '@tanstack/react-query';
+import ErrorState from '../components/ErrorState';
+import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 import FavoriteButton from '../components/FavoriteButton';
@@ -65,16 +68,15 @@ export default function PostDetailScreen() {
   const route = useRoute<PostDetailRoute>();
   const { postId } = route.params;
   const { width } = useWindowDimensions();
-  const [post, setPost] = useState<WPPost | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getPost(postId)
-      .then(setPost)
-      .catch(() => setError('Error al cargar el post'))
-      .finally(() => setLoading(false));
-  }, [postId]);
+  const {
+    data: post,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.post(postId),
+    queryFn: () => getPost(postId),
+  });
 
   const onShare = async () => {
     if (!post) return;
@@ -85,7 +87,7 @@ export default function PostDetailScreen() {
     } catch {}
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -93,11 +95,24 @@ export default function PostDetailScreen() {
     );
   }
 
-  if (error || !post) {
+  if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error || 'Post no encontrado'}</Text>
-      </View>
+      <ErrorState
+        title="No se pudo cargar la noticia"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  if (!post) {
+    return (
+      <ErrorState
+        title="Noticia no encontrada"
+        message="Puede que ya no esté disponible. Prueba a actualizar."
+        onRetry={refetch}
+        retryLabel="Actualizar"
+      />
     );
   }
 
@@ -166,10 +181,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.background,
-  },
-  errorText: {
-    fontSize: FONTS.regular,
-    color: COLORS.error,
   },
   hero: {
     width: '100%',
