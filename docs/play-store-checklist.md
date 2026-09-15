@@ -105,6 +105,8 @@ Consecuencias a tener en cuenta:
 - [x] Icono definitivo: F blanca sobre morado `#460032` (decidido el 2026-09-15). `store/icon-512.png` para la ficha.
 - [x] Feature graphic: `store/feature-graphic.png` (1024×500).
 - [ ] Screenshots de teléfono (mínimo 2, recomendable 4-6): hacerlas desde el APK/AAB en un móvil real.
+- [x] Textos de la ficha (nombre, descripción breve y completa, notas de versión): `store/listing.md`.
+- [x] URL de borrado de cuenta (obligatoria para apps con registro): `https://nezor11.github.io/fetro-app/delete-account`.
 - [x] Política de privacidad publicada en URL pública (`https://nezor11.github.io/fetro-app/privacy-policy`).
 - [x] Cuenta de Google Play Console creada (cuenta personal de Jorge, ver Decisión 5). Verificación pendiente a 2026-09-15.
 - [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).

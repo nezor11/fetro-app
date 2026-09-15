@@ -12,7 +12,7 @@ Preparado el 2026-09-15 a partir del código de la app (`src/services/*`, permis
 |---|---|---|
 | ¿La app recoge o comparte alguno de los tipos de datos requeridos? | **Sí** | Registro y perfil envían datos personales al backend. |
 | ¿Todos los datos del usuario se cifran en tránsito? | **Sí** | Todo va por HTTPS (`https://fatroiberica.es`). El proxy `localhost:3001` es solo desarrollo web. |
-| ¿Ofrece la app una forma de solicitar el borrado de datos? | **Sí** | Pantalla "Baja de cuenta" dentro de la app (`unsubscribe_account`) y contacto por email. Play pide además una URL pública donde se explique: usar la sección de derechos de la política de privacidad. |
+| ¿Ofrece la app una forma de solicitar el borrado de datos? | **Sí** | Pantalla "Baja de cuenta" dentro de la app (`unsubscribe_account`) y contacto por email. Play pide además una URL pública donde se explique: `https://nezor11.github.io/fetro-app/delete-account`. |
 | ¿La app ha pasado una revisión de seguridad independiente (MASA)? | **No** | |
 
 ### Tipos de datos
