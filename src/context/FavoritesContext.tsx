@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -15,12 +16,17 @@ import {
   removeFromList,
   saveFavorites,
 } from '../services/favorites';
+import { useAuth } from './AuthContext';
 
 /**
  * Context reactivo para favoritos. Vive por encima del navegador (en
- * App.tsx, al nivel del QueryClientProvider) porque cualquier pantalla
- * de detalle puede marcar/desmarcar, y FavoritesScreen debe enterarse
+ * App.tsx, dentro de AuthProvider) porque cualquier pantalla de detalle
+ * puede marcar/desmarcar, y FavoritesScreen debe enterarse
  * inmediatamente.
+ *
+ * Los favoritos se cargan y guardan **por usuario** (ver
+ * `services/favorites.ts`): al cambiar el `user.id` del AuthContext se
+ * recarga la lista; sin usuario la lista está vacía y no se persiste.
  *
  * El patrón: todas las operaciones devuelven promesas que se resuelven
  * cuando AsyncStorage ha persistido. El `favorites` del state se
@@ -31,8 +37,8 @@ import {
 interface FavoritesContextValue {
   favorites: Favorite[];
   /**
-   * `true` mientras se lee el storage en el montaje. Útil para no
-   * parpadear "vacío → cargado" en la FavoritesScreen al arrancar.
+   * `true` mientras se lee el storage tras un cambio de usuario. Útil
+   * para no parpadear "vacío → cargado" en la FavoritesScreen.
    */
   isLoading: boolean;
   /** Comprueba si un recurso está en favoritos (lookup O(n), suficiente). */
@@ -44,17 +50,40 @@ interface FavoritesContextValue {
 const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Copia siempre actual de la lista, para que dos toggles seguidos
+  // (doble tap) no trabajen sobre la misma closure y se pisen.
+  const favoritesRef = useRef<Favorite[]>([]);
 
-  // Carga inicial desde AsyncStorage. Solo se ejecuta una vez en el
-  // montaje del provider, al inicio de la app.
+  const commit = useCallback((next: Favorite[]) => {
+    favoritesRef.current = next;
+    setFavorites(next);
+  }, []);
+
+  // Carga (o vaciado) cada vez que cambia el usuario. El flag `active`
+  // descarta la respuesta si el usuario volvió a cambiar antes de que
+  // AsyncStorage contestara.
   useEffect(() => {
-    loadFavorites().then((list) => {
-      setFavorites(list);
+    let active = true;
+    if (userId === null) {
+      commit([]);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    loadFavorites(userId).then((list) => {
+      if (!active) return;
+      commit(list);
       setIsLoading(false);
     });
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [userId, commit]);
 
   const isFavorite = useCallback(
     (kind: FavoriteKind, id: string) => isInList(favorites, kind, id),
@@ -63,15 +92,18 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   const toggleFavorite = useCallback(
     async (fav: Omit<Favorite, 'addedAt'>): Promise<boolean> => {
-      const currently = isInList(favorites, fav.kind, fav.id);
+      const current = favoritesRef.current;
+      const currently = isInList(current, fav.kind, fav.id);
       const next = currently
-        ? removeFromList(favorites, fav.kind, fav.id)
-        : addToList(favorites, fav);
-      setFavorites(next);
-      await saveFavorites(next);
+        ? removeFromList(current, fav.kind, fav.id)
+        : addToList(current, fav);
+      commit(next);
+      if (userId !== null) {
+        await saveFavorites(userId, next);
+      }
       return !currently;
     },
-    [favorites]
+    [userId, commit]
   );
 
   const value = useMemo(

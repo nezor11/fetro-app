@@ -55,7 +55,44 @@ export interface Favorite {
   imageUrl?: string | null;
 }
 
-const STORAGE_KEY = '@fetro_favorites';
+/**
+ * Los favoritos se guardan **por usuario** (`@fetro_favorites:<userId>`)
+ * para que dos personas que compartan dispositivo no vean las listas
+ * del otro, y para que al cerrar y volver a abrir sesión cada uno
+ * recupere la suya.
+ *
+ * `LEGACY_STORAGE_KEY` es la clave única que usaban las versiones
+ * anteriores. La primera vez que un usuario carga favoritos y no tiene
+ * lista propia, hereda la antigua (fue él quien la creó en este
+ * dispositivo con casi total seguridad) y la clave vieja se borra.
+ */
+const STORAGE_KEY_PREFIX = '@fetro_favorites:';
+const LEGACY_STORAGE_KEY = '@fetro_favorites';
+
+function storageKeyFor(userId: number | string): string {
+  return `${STORAGE_KEY_PREFIX}${userId}`;
+}
+
+function parseFavorites(raw: string | null): Favorite[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    // Validación defensiva: si alguien mete mano al storage o una
+    // versión antigua escribió otra forma, devolvemos vacío en vez de
+    // crashear. También se descartan entradas con `kind` desconocido.
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (f): f is Favorite =>
+        f &&
+        typeof f === 'object' &&
+        typeof f.id === 'string' &&
+        typeof f.kind === 'string' &&
+        f.kind in FAVORITE_KIND_LABELS
+    );
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Clave única que identifica un recurso (ej. "vetsics:1234"). Permite
@@ -66,23 +103,39 @@ export function favoriteKey(kind: FavoriteKind, id: string): string {
   return `${kind}:${id}`;
 }
 
-export async function loadFavorites(): Promise<Favorite[]> {
+export async function loadFavorites(
+  userId: number | string
+): Promise<Favorite[]> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    // Validación defensiva: si alguien mete mano al storage o una
-    // versión antigua escribió otra forma, devolvemos vacío en vez de
-    // crashear.
-    return Array.isArray(parsed) ? (parsed as Favorite[]) : [];
+    const own = await AsyncStorage.getItem(storageKeyFor(userId));
+    if (own !== null) return parseFavorites(own);
+
+    // Sin lista propia: heredamos la antigua (si existe) y la retiramos.
+    const legacy = await AsyncStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy !== null) {
+      const migrated = parseFavorites(legacy);
+      await AsyncStorage.setItem(
+        storageKeyFor(userId),
+        JSON.stringify(migrated)
+      );
+      await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+      return migrated;
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-export async function saveFavorites(favorites: Favorite[]): Promise<void> {
+export async function saveFavorites(
+  userId: number | string,
+  favorites: Favorite[]
+): Promise<void> {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+    await AsyncStorage.setItem(
+      storageKeyFor(userId),
+      JSON.stringify(favorites)
+    );
   } catch {
     // Si AsyncStorage falla (cuota llena, etc.) mejor fallar silencioso
     // y que la UI refleje el estado real al siguiente load. No tiene
