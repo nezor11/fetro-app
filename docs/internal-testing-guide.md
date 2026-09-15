@@ -41,7 +41,7 @@ Play Console te pide cubrir varias secciones antes de dejar publicar siquiera en
 
 - **App access** — declarar si la app necesita login. Para FetroApp: sí, login con email+password contra el backend de pruebas. Hay que dar credenciales de demostración a Google para que el revisor pueda probar.
   - Username: `jorge.test@novicell.es`
-  - Password: `FetroTest2026!`
+  - Password: la de la cuenta de test (está en el gestor de contraseñas del equipo; **no** la escribas aquí, este repo es público)
   - Notas: "App de pruebas internas de Novicell. Login contra backend WordPress de Fatro Ibérica con autorización."
 
 - **Ads** — "No, my app does not contain ads".
@@ -134,7 +134,7 @@ Este bloque es lo que les copy-pegas a los testers vía email/Slack.
 > Hay dos opciones:
 >
 > - **Crear una cuenta de prueba** desde la pantalla de registro (recomendado).
-> - O usar las credenciales compartidas: `jorge.test@novicell.es` / `FetroTest2026!` (solo para ti, no compartir).
+> - O usar las credenciales compartidas de `jorge.test@novicell.es` (contraseña en el gestor del equipo; solo para ti, no compartir).
 >
 > ### Qué probar
 >

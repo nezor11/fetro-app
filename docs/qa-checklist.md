@@ -21,7 +21,7 @@ Diseñada para hacerse de un tirón. Si encuentras algo roto, marca el bullet co
 
 ## 3. Login · 1 min
 
-- ⭐ El formulario acepta input. Probar con `jorge.test@novicell.es` / `FetroTest2026!`.
+- ⭐ El formulario acepta input. Probar con `jorge.test@novicell.es` (contraseña en el gestor del equipo).
 - ⭐ Tras pulsar "Entrar", la app navega a Home (Noticias) sin error.
 - Botón "Olvidaste tu contraseña" lleva a la pantalla correspondiente.
 - Botón "Crear cuenta" lleva al formulario de registro.

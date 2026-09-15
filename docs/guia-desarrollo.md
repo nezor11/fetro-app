@@ -637,7 +637,7 @@ npx expo start
 
 **Credenciales de prueba**:
 - Email: `jorge.test@novicell.es`
-- Contraseña: `FetroTest2026!`
+- Contraseña: en el gestor de contraseñas del equipo (no se documenta aquí porque el repositorio es público)
 
 ---
 
