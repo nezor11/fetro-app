@@ -59,7 +59,7 @@ export function toDateKey(date: Date): string {
  * sea de un solo sitio si mañana el diseño evoluciona.
  */
 export const EVENT_COLORS: Record<CalendarEventKind, string> = {
-  vetsics: '#8C1464', // Novicell accent
+  vetsics: '#8C1464', // acento morado de la marca de la app
   training: '#1976D2',
   solicitud: '#E67E22',
 };

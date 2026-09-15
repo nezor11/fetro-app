@@ -15,7 +15,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.novicell.labs.fetroapp",
+      "package": "com.jmtnez.fetroapp",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#460032",

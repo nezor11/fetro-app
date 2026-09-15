@@ -42,7 +42,7 @@ Play Console te pide cubrir varias secciones antes de dejar publicar siquiera en
 - **App access** — declarar si la app necesita login. Para FetroApp: sí, login con email+password contra el backend de pruebas. Hay que dar credenciales de demostración a Google para que el revisor pueda probar.
   - Username: `jorge.test@novicell.es`
   - Password: la de la cuenta de test (está en el gestor de contraseñas del equipo; **no** la escribas aquí, este repo es público)
-  - Notas: "App de pruebas internas de Novicell. Login contra backend WordPress de Fatro Ibérica con autorización."
+  - Notas: "App en pruebas internas. Login contra backend WordPress de Fatro Ibérica con autorización del titular."
 
 - **Ads** — "No, my app does not contain ads".
 
@@ -57,7 +57,7 @@ Play Console te pide cubrir varias secciones antes de dejar publicar siquiera en
 - **Data safety** — formulario detallado sobre qué datos recoge, si los comparte, si los cifra. Para FetroApp:
   - Datos recogidos: Personal info (Name, Email, Address, Phone), App activity (in-app actions), App info & performance (Crash logs).
   - Data is encrypted in transit: Yes (HTTPS/TLS).
-  - Users can request data deletion: Yes (vía pantalla "Dar de baja mi cuenta" + email a `dpo@novicell.es`).
+  - Users can request data deletion: Yes (vía pantalla "Dar de baja mi cuenta" + email de contacto del desarrollador).
   - Data shared with third parties: No.
 
 - **Government apps** — No.
@@ -96,10 +96,9 @@ Para FetroApp, dado que somos pocos testers iniciales (~5-10 personas), la **lis
 
 | Persona | Email | Rol |
 |---|---|---|
-| Marcelo | (su email Novicell) | Product owner |
-| Jorge | (tu email Novicell) | Dev / responsable testing |
-| (Tester Novicell 1) | | QA |
-| (Tester Novicell 2) | | QA |
+| Jorge | (email de la cuenta de Play Console) | Dev / responsable testing |
+| (Tester 1) | | QA |
+| (Tester 2) | | QA |
 | Juan Luis | (su email Fatro) | Backend developer (opcional) |
 
 Mínimo 2-3 testers reales — Google Play obliga (en algún momento; durante Internal no es estricto, pero para Closed Testing exige 12 testers durante 14 días).
@@ -120,7 +119,7 @@ Este bloque es lo que les copy-pegas a los testers vía email/Slack.
 
 > **¡Hola! Te invito a probar FetroApp en internal testing.**
 >
-> Es una app móvil que estamos desarrollando como proyecto piloto en Novicell. Necesito tu ayuda durante un par de semanas para validar que funciona en distintos móviles.
+> Es una app móvil que estoy desarrollando como proyecto personal. Necesito tu ayuda durante un par de semanas para validar que funciona en distintos móviles.
 >
 > ### Cómo acceder
 >

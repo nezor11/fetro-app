@@ -22,7 +22,7 @@ Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. 
 
 ### Iconos finales (branding real)
 
-Los iconos actuales son los **defaults del template de Expo**. Para Play Store hay que sustituir por iconos con branding de Novicell o un identificador propio del proyecto piloto. Necesitamos:
+Los iconos actuales son los **defaults del template de Expo**. Para Play Store hay que sustituir por un identificador propio de FetroApp. Necesitamos:
 
 - **`assets/icon.png`** — 1024×1024 PNG sin transparencia.
 - **`assets/android-icon-foreground.png`** — 512×512 PNG, capa frontal del adaptive icon (logo recortado, fondo transparente).
@@ -30,7 +30,7 @@ Los iconos actuales son los **defaults del template de Expo**. Para Play Store h
 - **`assets/android-icon-monochrome.png`** — 512×512 PNG en escala de grises (Android 13+ themed icons).
 - **`assets/splash-icon.png`** — 1024×1024 PNG para la pantalla de splash.
 
-Como es proyecto piloto de Novicell, mejor partir del **logo de Novicell** o crear un identificador propio para FetroApp que no use marca de Fatro. Si no hay diseñador disponible, se puede generar con **`https://icon.kitchen`** a partir de un SVG/PNG del logo en alta resolución.
+Crear un identificador propio para FetroApp que no use marca de Fatro. Si no hay diseñador disponible, se puede generar con **`https://icon.kitchen`** a partir de un SVG/PNG del logo en alta resolución.
 
 ### Screenshots para la ficha de Play Store
 
@@ -65,13 +65,13 @@ Vídeo en YouTube (público o no listado) con un walkthrough de 30-60s de la app
 
 Mantenemos el nombre actual de proyecto. En Play Console se introducirá tal cual.
 
-### Decisión 2 · Package ID → ✅ `com.novicell.labs.fetroapp`
+### Decisión 2 · Package ID → ✅ `com.jmtnez.fetroapp` (cambiado el 2026-09-15)
 
 App nueva, no hereda la `es.swapp.fatrocomunidad` original. Razones:
 
-- Deja claro que el origen es **Novicell** y que es un **proyecto del entorno `labs`** (piloto/training/I+D), no la app oficial corporativa de Fatro.
+- Identifica al desarrollador (cuenta personal `jmtnez`, la misma que en Expo) y deja claro que no es la app oficial de Fatro.
 - No suplanta a Fatro ni a SwApp.
-- Sigue la convención `com.<empresa>.<entorno>.<proyecto>`, alineado con la organización del repositorio (`Novicell/Proyectos/_labs/wordpress-apis/FatroApp`).
+- Sigue la convención `com.<desarrollador>.<proyecto>`. Antes era `com.novicell.labs.fetroapp`; como la app nunca llegó a subirse a Play Console con ese ID, el cambio no tiene coste.
 - Si en el futuro Fatro decide adoptar la app como oficial corporativa, lo limpio será publicar entonces una **app distinta** con package `com.fatroibericas.app` o equivalente — la actual queda como histórico de I+D. Cambiar el package ID después del primer release público es publicar app nueva en Play Store, perdiendo descargas y reviews acumulados.
 
 ### Decisión 3 · ¿Sustituir la Android original? → ✅ No, app nueva
@@ -80,26 +80,22 @@ La Android original `es.swapp.fatrocomunidad` (publicada por SwApp) sigue su cam
 
 ---
 
-## 🔴 Bloqueado — sigue pendiente con Marcelo
+## 🔴 Pendiente de Jorge
 
 ### Decisión 4 · Política de privacidad publicada
 
-Validar el borrador (`docs/privacy-policy-draft.md`) con DPO de Novicell y publicar en una URL pública. Posibles ubicaciones:
-
-- `novicell.es/legal/fetroapp-privacy`
-- `novicell.es/politica-privacidad-fetroapp`
-- Cualquier subpágina pública de Novicell con TLS
+Completar los placeholders del borrador (`docs/privacy-policy-draft.md`: nombre, NIF y email de contacto del desarrollador) y publicar en una URL pública. Opción más rápida: GitHub Pages del propio repo (`https://nezor11.github.io/fetro-app/privacy-policy`).
 
 La URL es **obligatoria** para Play Store y se introduce al crear la app en Play Console.
 
 ### Decisión 5 · Cuenta Google Play Console → ✅ cuenta personal de Jorge (2026-09-15)
 
-Se descarta esperar a una cuenta de empresa de Novicell: se publica desde la cuenta personal de Jorge (`martinezortiz@gmail.com`). Coste único de 25 USD y verificación de identidad (DNI/pasaporte).
+Se publica desde la cuenta personal de Jorge (`martinezortiz@gmail.com`). Coste único de 25 USD y verificación de identidad (DNI/pasaporte).
 
 Consecuencias a tener en cuenta:
 
-- El "desarrollador" visible en la ficha será el nombre de esa cuenta, no Novicell.
-- La política de privacidad debe ser coherente con quién figura como responsable. Si sigue siendo Novicell, hay que indicar en la ficha que la app se publica en su nombre; si pasa a ser Jorge, hay que reescribir el bloque 1 del borrador.
+- El "desarrollador" visible en la ficha será el nombre de esa cuenta.
+- La política de privacidad nombra a Jorge como responsable del tratamiento (bloque 1 del borrador, con placeholders por completar).
 - Google permite transferir la app a otra cuenta más adelante (formulario de transferencia), así que no es una decisión irreversible.
 
 ---

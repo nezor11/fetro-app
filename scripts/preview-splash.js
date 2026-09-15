@@ -5,7 +5,7 @@
  * validate the visual identity before the APK is even built.
  *
  * Composition:
- *   - Full bleed Novicell purple background (#460032)
+ *   - Full bleed brand purple background (#460032)
  *   - The icon (icon.png) centered vertically, scaled to ~30% of width
  *
  * Output: docs/preview-splash.png
@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-const NOVICELL_PURPLE = '#460032';
+const BRAND_PURPLE = '#460032';
 const PHONE_WIDTH = 1080;
 const PHONE_HEIGHT = 2400;
 const ICON_SIZE = Math.round(PHONE_WIDTH * 0.3); // 324px — matches Expo splash "contain"
@@ -49,7 +49,7 @@ async function main() {
       width: PHONE_WIDTH,
       height: PHONE_HEIGHT,
       channels: 4,
-      background: NOVICELL_PURPLE,
+      background: BRAND_PURPLE,
     },
   })
     .composite([{ input: iconBuffer, top, left }])

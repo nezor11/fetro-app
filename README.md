@@ -149,7 +149,7 @@ eas build --platform ios --profile preview
 
 ## Contexto del proyecto
 
-Este proyecto forma parte de la especialización en WordPress dentro del CDS 2026 de Novicell. Los objetivos incluyen:
+Proyecto personal de aprendizaje: una app móvil sobre un WordPress real usado como CMS headless, con autorización del titular del backend. Los objetivos incluyen:
 - Dominio de la REST API de WordPress como headless CMS
 - Desarrollo full-stack con JavaScript/TypeScript
 - Experiencia en desarrollo móvil cross-platform

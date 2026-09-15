@@ -29,7 +29,7 @@ Cambia las constantes al inicio del script:
 
 | Constante | Para qué |
 |---|---|
-| `NOVICELL_PURPLE` | Color de fondo. Cambiar a hex de la marca real. |
+| `BRAND_PURPLE` | Color de fondo. Cambiar a hex de la marca real. |
 | `letter` (en `buildIconSvg`) | El glyph centrado. Por defecto "F". Sustituir por la inicial del producto si cambia el nombre. |
 | `letterSize` | Proporción del glyph (0.62 default, 0.45 para Android adaptive icon por la safe zone). |
 

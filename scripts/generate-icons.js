@@ -2,7 +2,7 @@
 /**
  * Generates placeholder icons for FetroApp from inline SVGs using sharp.
  *
- * The result is intentionally minimal — just the Novicell purple background
+ * The result is intentionally minimal — just the brand purple background
  * with a big white "F" centered. It is a placeholder until a designer
  * provides final branding. The benefit over the Expo default icons is that
  * the APK installed on a device will show a recognizable color and letter,
@@ -15,7 +15,7 @@
  *   - assets/icon.png                       1024x1024
  *   - assets/splash-icon.png                1024x1024
  *   - assets/android-icon-foreground.png    512x512   (purple "F" with transparent bg)
- *   - assets/android-icon-background.png    512x512   (solid Novicell purple)
+ *   - assets/android-icon-background.png    512x512   (solid brand purple)
  *   - assets/android-icon-monochrome.png    512x512   (white "F" on black for themed icons)
  *   - assets/favicon.png                    48x48
  */
@@ -24,7 +24,7 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-const NOVICELL_PURPLE = '#460032';
+const BRAND_PURPLE = '#460032';
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 
 /**
@@ -75,18 +75,18 @@ async function main() {
     fs.mkdirSync(ASSETS_DIR, { recursive: true });
   }
 
-  console.log(`Generating placeholder icons (Novicell purple ${NOVICELL_PURPLE})…`);
+  console.log(`Generating placeholder icons (brand purple ${BRAND_PURPLE})…`);
 
   // 1. icon.png — main app icon (purple bg + white F)
   await svgToPng(
-    buildIconSvg({ size: 1024, bg: NOVICELL_PURPLE, fg: '#FFFFFF' }),
+    buildIconSvg({ size: 1024, bg: BRAND_PURPLE, fg: '#FFFFFF' }),
     1024,
     path.join(ASSETS_DIR, 'icon.png')
   );
 
   // 2. splash-icon.png — same look as icon, used by Expo splash
   await svgToPng(
-    buildIconSvg({ size: 1024, bg: NOVICELL_PURPLE, fg: '#FFFFFF' }),
+    buildIconSvg({ size: 1024, bg: BRAND_PURPLE, fg: '#FFFFFF' }),
     1024,
     path.join(ASSETS_DIR, 'splash-icon.png')
   );
@@ -109,7 +109,7 @@ async function main() {
   await svgToPng(
     `<?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="${NOVICELL_PURPLE}"/>
+  <rect width="512" height="512" fill="${BRAND_PURPLE}"/>
 </svg>`,
     512,
     path.join(ASSETS_DIR, 'android-icon-background.png')
@@ -132,7 +132,7 @@ async function main() {
 
   // 6. favicon.png — for the Expo web build
   await svgToPng(
-    buildIconSvg({ size: 48, bg: NOVICELL_PURPLE, fg: '#FFFFFF' }),
+    buildIconSvg({ size: 48, bg: BRAND_PURPLE, fg: '#FFFFFF' }),
     48,
     path.join(ASSETS_DIR, 'favicon.png')
   );

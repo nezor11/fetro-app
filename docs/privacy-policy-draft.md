@@ -1,8 +1,8 @@
 # Política de privacidad — FetroApp
 
-**Borrador pendiente de validación legal.** Antes de publicar, revisar con DPO de Novicell y, si procede, con asesoría jurídica.
+**Borrador pendiente de validación legal.** Antes de publicar, completar los datos del responsable y, si procede, revisar con asesoría jurídica.
 
-**Última actualización: 2026-04-27.**
+**Última actualización: 2026-09-15.**
 
 ---
 
@@ -10,20 +10,20 @@
 
 El responsable del tratamiento de los datos personales recogidos a través de la aplicación móvil **FetroApp** es:
 
-> **NOVICELL SPAIN, S.L.**  
-> *(dirección postal y NIF a completar por Marcelo)*  
-> Email de contacto: `dpo@novicell.es` *(verificar buzón real con el equipo de Novicell)*
+> **[Nombre y apellidos del desarrollador]**  
+> *(NIF y dirección postal a completar)*  
+> Email de contacto: `[email de contacto]` *(usar el mismo email de desarrollador que figura en Google Play Console)*
 
-**FetroApp es un proyecto piloto / I+D del equipo `_labs` de Novicell**, desarrollado dentro del marco del CDS 2026 con fines técnicos de aprendizaje y demostración. No es la app oficial de ninguna otra entidad.
+**FetroApp es un proyecto personal de aprendizaje** desarrollado por una sola persona con fines técnicos y de demostración. No es la app oficial de ninguna empresa ni entidad.
 
 ## 2. Naturaleza del proyecto
 
 FetroApp es una aplicación **de pruebas** que consume datos de un backend WordPress de un tercero (Fatro Ibérica) **previa autorización del titular del backend**. El uso de la aplicación se limita a:
 
-- Equipo interno de Novicell para validación técnica.
+- El propio desarrollador y las personas que invite como testers.
 - Eventuales colaboradores autorizados durante el desarrollo.
 
-**No está pensada para publicación masiva** ni para uso comercial mientras siga en este estado de proyecto piloto. La presencia de esta aplicación en Play Store, si llega, será únicamente en el canal **Internal Testing** o **Closed Testing** con tester whitelisted.
+**No está pensada para publicación masiva** ni para uso comercial mientras siga en este estado de proyecto personal. La presencia de esta aplicación en Play Store, si llega, será únicamente en el canal **Internal Testing** o **Closed Testing** con tester whitelisted.
 
 ## 3. Datos que recogemos
 
@@ -78,7 +78,7 @@ El tratamiento de los datos se basa en:
 
 ## 6. Almacenamiento y encargados de tratamiento
 
-Los datos introducidos por el usuario se transmiten a un backend WordPress alojado en **SiteGround** (proveedor cumplidor del RGPD, dentro del Espacio Económico Europeo). Ese backend pertenece a Fatro Ibérica S.L., que en este contexto actúa como **encargado del tratamiento técnico** habiendo autorizado a Novicell el uso del mismo durante la fase de pruebas.
+Los datos introducidos por el usuario se transmiten a un backend WordPress alojado en **SiteGround** (proveedor cumplidor del RGPD, dentro del Espacio Económico Europeo). Ese backend pertenece a Fatro Ibérica S.L., que en este contexto actúa como **encargado del tratamiento técnico** habiendo autorizado al desarrollador el uso del mismo durante la fase de pruebas.
 
 Las comunicaciones se realizan **siempre cifradas** mediante HTTPS/TLS. Los datos almacenados en el dispositivo del tester (cookie de sesión, favoritos locales) se guardan en el almacenamiento privado de la aplicación, accesible solo por la propia app.
 
@@ -102,9 +102,9 @@ De acuerdo con el RGPD, el tester tiene derecho a:
 ### 8.1 Cómo ejercer estos derechos
 
 - **Rectificación**: directamente desde la pantalla "Editar perfil" de la app.
-- **Baja de cuenta**: desde la pantalla "Dar de baja mi cuenta" del Perfil. Esta operación desactiva inmediatamente el acceso pero los datos quedan retenidos hasta la limpieza periódica del proyecto piloto.
-- **Borrado completo (derecho al olvido)**: enviar correo a `dpo@novicell.es` solicitándolo expresamente. Atenderemos la solicitud en el plazo máximo de 30 días.
-- **Cualquier otro derecho**: enviar correo a `dpo@novicell.es`.
+- **Baja de cuenta**: desde la pantalla "Dar de baja mi cuenta" del Perfil. Esta operación desactiva inmediatamente el acceso pero los datos quedan retenidos hasta la limpieza periódica del proyecto.
+- **Borrado completo (derecho al olvido)**: enviar correo a `[email de contacto]` solicitándolo expresamente. Atenderemos la solicitud en el plazo máximo de 30 días.
+- **Cualquier otro derecho**: enviar correo a `[email de contacto]`.
 
 El tester tiene derecho a presentar una **reclamación ante la Agencia Española de Protección de Datos** (`https://www.aepd.es`) si considera que sus derechos no han sido atendidos correctamente.
 
@@ -121,13 +121,12 @@ Cualquier cambio significativo en esta política de privacidad se notificará al
 
 ---
 
-## Notas internas para Marcelo (no parte de la política pública)
+## Notas internas (no parte de la política pública)
 
 Antes de publicar este texto en URL pública:
 
-1. **Completar dirección postal y NIF** de Novicell Spain en el bloque 1.
-2. **Confirmar email DPO** (`dpo@novicell.es` es una suposición — verificar buzón real).
-3. **Validar plazo de conservación** (30 días tras baja es propuesta razonable para piloto, pero confirmar con asesoría jurídica si procede).
-4. **Confirmar mención del backend de Fatro** (sección 6) — es un hecho técnico que conviene transparentar para Play Store, pero si Fatro prefiere no aparecer mencionado, se puede sustituir por una descripción genérica tipo "backend WordPress alojado en SiteGround dentro del EEE".
-5. **Publicación**: la URL final puede ser `novicell.es/legal/fetroapp-privacy` u otra subpágina de Novicell. La URL es **obligatoria** para Play Store y se introduce en el formulario de creación de la app en Play Console.
-6. **Idioma**: si se publica también en versión catalana o inglesa, hay que tener traducción jurada o equivalente.
+1. **Completar nombre, NIF, dirección postal y email de contacto** en el bloque 1. El email debe coincidir con el de desarrollador de Play Console.
+2. **Validar plazo de conservación** (30 días tras baja es una propuesta razonable, pero confirmar con asesoría jurídica si procede).
+3. **Confirmar mención del backend de Fatro** (sección 6). Es un hecho técnico que conviene transparentar para Play Store, pero si Fatro prefiere no aparecer, sustituir por "backend WordPress alojado en SiteGround dentro del EEE".
+4. **Publicación**: la URL es **obligatoria** para Play Store. Opción más rápida: GitHub Pages del repositorio.
+5. **Idioma**: si se publica también en inglés, cuidar la equivalencia jurídica de la traducción.
