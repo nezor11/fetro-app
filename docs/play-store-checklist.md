@@ -14,7 +14,7 @@ Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. 
 - [x] **Plugin `expo-camera` configurado** con descripción de permiso en español.
 - [x] **Permisos Android limpios** (solo CAMERA, sin RECORD_AUDIO accidental).
 - [x] **Primer build de preview lanzado** (build `431dd944-8bbb-4164-9cbf-2106fd7d4c70`).
-- [x] **Borrador de política de privacidad** redactado en `docs/privacy-policy-draft.md`.
+- [x] **Política de privacidad** redactada en `docs/privacy-policy.md` y publicada en GitHub Pages.
 
 ---
 
@@ -84,7 +84,7 @@ La Android original `es.swapp.fatrocomunidad` (publicada por SwApp) sigue su cam
 
 ### Decisión 4 · Política de privacidad publicada
 
-Completar los placeholders del borrador (`docs/privacy-policy-draft.md`: nombre, NIF y email de contacto del desarrollador) y publicar en una URL pública. Opción más rápida: GitHub Pages del propio repo (`https://nezor11.github.io/fetro-app/privacy-policy`).
+✅ Redactada (`docs/privacy-policy.md`) con Fatro Ibérica como responsable del tratamiento (los datos van a sus servidores; el desarrollador no los recibe) y publicada vía GitHub Pages en `https://nezor11.github.io/fetro-app/privacy-policy`. Pendiente: avisar a Fatro de que se les nombra como responsables.
 
 La URL es **obligatoria** para Play Store y se introduce al crear la app en Play Console.
 
@@ -104,7 +104,7 @@ Consecuencias a tener en cuenta:
 
 - [ ] Iconos finales (branding real).
 - [ ] Screenshots y feature graphic.
-- [ ] Política de privacidad publicada en URL pública.
+- [x] Política de privacidad publicada en URL pública (`https://nezor11.github.io/fetro-app/privacy-policy`).
 - [x] Cuenta de Google Play Console creada (cuenta personal de Jorge, ver Decisión 5). Verificación pendiente a 2026-09-15.
 - [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).
 - [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
