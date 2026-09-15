@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -37,7 +37,30 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
  * El estado `scanningLocked` evita que mientras estamos validando un
  * QR contra el backend, la cámara detecte el mismo frame N veces y
  * dispare navegaciones repetidas.
+ *
+ * Tras un error (QR no reconocido o fallo de red) el bloqueo **no** se
+ * libera hasta que el usuario cierra la alerta y pasa un pequeño
+ * cooldown: la cámara sigue apuntando al mismo código y, si liberásemos
+ * al instante, el siguiente frame volvería a disparar petición + alerta
+ * en bucle. Además se recuerda el último identifier fallido para
+ * ignorarlo mientras el usuario no apunte a otro código distinto.
  */
+
+/** Ms de gracia tras cerrar la alerta antes de volver a escanear. */
+const RESCAN_COOLDOWN_MS = 1500;
+
+/**
+ * Forma esperada de un identifier de QR de Fatro: letras, dígitos,
+ * guion y guion bajo, longitud acotada. Cualquier otra cosa (URLs,
+ * códigos de barras de productos, texto largo) se ignora sin consultar
+ * al backend.
+ */
+const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+export function isValidIdentifier(raw: string): boolean {
+  return IDENTIFIER_PATTERN.test(raw.trim());
+}
+
 export default function QRScanScreen() {
   const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
@@ -46,36 +69,64 @@ export default function QRScanScreen() {
   const [loading, setLoading] = useState(false);
   // Evita navegaciones múltiples por el mismo QR.
   const scanningLockedRef = useRef(false);
+  // Último identifier que falló; se ignora hasta que se escanee otro.
+  const lastFailedRef = useRef<string | null>(null);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showError = (title: string, message: string) => {
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    };
+  }, []);
+
+  /** Libera el bloqueo de escaneo tras el cooldown. */
+  const unlockAfterCooldown = () => {
+    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    cooldownTimerRef.current = setTimeout(() => {
+      scanningLockedRef.current = false;
+    }, RESCAN_COOLDOWN_MS);
+  };
+
+  /**
+   * Muestra un error y solo cuando el usuario lo cierra vuelve a
+   * habilitar el escaneo (con cooldown). En web `window.alert` es
+   * síncrono, así que el cooldown arranca al volver de la llamada.
+   */
+  const showErrorAndUnlock = (title: string, message: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
+      unlockAfterCooldown();
     } else {
-      Alert.alert(title, message);
+      Alert.alert(title, message, [
+        { text: 'OK', onPress: unlockAfterCooldown },
+      ]);
     }
   };
 
   const resolveIdentifier = async (identifier: string) => {
-    if (!cookie || !identifier.trim()) return;
+    const trimmed = identifier.trim();
+    if (!cookie || !trimmed) {
+      scanningLockedRef.current = false;
+      return;
+    }
     setLoading(true);
     try {
-      const qr = await getQRCodeByIdentifier(cookie, identifier);
+      const qr = await getQRCodeByIdentifier(cookie, trimmed);
       if (!qr) {
-        showError(
+        lastFailedRef.current = trimmed;
+        showErrorAndUnlock(
           'QR no reconocido',
-          `El código "${identifier}" no coincide con ningún compromiso o merchandising registrado en Fatro. Verifica que has escaneado el correcto o intenta introducirlo manualmente.`
+          `El código "${trimmed}" no coincide con ningún compromiso o merchandising registrado en Fatro. Verifica que has escaneado el correcto o intenta introducirlo manualmente.`
         );
-        scanningLockedRef.current = false;
-        setLoading(false);
         return;
       }
-      navigation.replace('QRDetail', { identifier: identifier.trim() });
+      navigation.replace('QRDetail', { identifier: trimmed });
     } catch (err: any) {
-      showError(
+      lastFailedRef.current = trimmed;
+      showErrorAndUnlock(
         'Error de conexión',
         err.message || 'Inténtalo de nuevo en unos segundos.'
       );
-      scanningLockedRef.current = false;
     } finally {
       setLoading(false);
     }
@@ -83,8 +134,23 @@ export default function QRScanScreen() {
 
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
     if (scanningLockedRef.current || loading) return;
+    const raw = (result.data || '').trim();
+    // Ignoramos payloads que no tienen pinta de identifier de Fatro y
+    // el mismo código que acaba de fallar (el usuario aún no ha movido
+    // la cámara).
+    if (!isValidIdentifier(raw) || raw === lastFailedRef.current) return;
     scanningLockedRef.current = true;
-    resolveIdentifier(result.data);
+    resolveIdentifier(raw);
+  };
+
+  const handleManualSubmit = () => {
+    if (loading) return;
+    // La entrada manual es una acción explícita del usuario: no espera
+    // al cooldown de la cámara y sí permite reintentar el mismo código.
+    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    lastFailedRef.current = null;
+    scanningLockedRef.current = true;
+    resolveIdentifier(manualIdentifier);
   };
 
   // Estado 1: permiso aún no pedido (valor undefined en el primer render)
@@ -130,9 +196,10 @@ export default function QRScanScreen() {
           style={StyleSheet.absoluteFill}
           facing="back"
           barcodeScannerSettings={{
-            // QR + formatos de barras comunes; la app solo necesita
-            // QR, pero añadir más es gratis y cubre variantes.
-            barcodeTypes: ['qr', 'code128', 'code39', 'ean13'],
+            // Solo QR: los códigos de Fatro son siempre QR y aceptar
+            // formatos de barras hacía que cualquier producto del
+            // súper disparase una consulta al backend y un alert.
+            barcodeTypes: ['qr'],
           }}
           onBarcodeScanned={handleBarcodeScanned}
         />
@@ -172,14 +239,11 @@ export default function QRScanScreen() {
           <TouchableOpacity
             style={[
               styles.manualButton,
-              (!manualIdentifier.trim() || loading) &&
+              (!isValidIdentifier(manualIdentifier) || loading) &&
                 styles.manualButtonDisabled,
             ]}
-            onPress={() => {
-              scanningLockedRef.current = true;
-              resolveIdentifier(manualIdentifier);
-            }}
-            disabled={!manualIdentifier.trim() || loading}
+            onPress={handleManualSubmit}
+            disabled={!isValidIdentifier(manualIdentifier) || loading}
             activeOpacity={0.8}
           >
             <Text style={styles.manualButtonText}>Buscar</Text>

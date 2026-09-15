@@ -89,7 +89,10 @@ export default function HomeScreen() {
       contentContainerStyle={styles.list}
       refreshControl={
         <RefreshControl
-          refreshing={isRefetching}
+          // `isRefetching` también es true al cargar la siguiente página;
+          // sin este filtro el spinner de pull-to-refresh aparecía al
+          // hacer scroll infinito.
+          refreshing={isRefetching && !isFetchingNextPage}
           onRefresh={refetch}
           colors={[COLORS.primary]}
         />
