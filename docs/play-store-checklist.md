@@ -6,9 +6,9 @@ Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. 
 
 ## ✅ Hecho
 
-- [x] **Cuenta Expo creada** (`jmtnez` / `martinezortiz@gmail.com`).
+- [x] **Cuenta Expo** `nezor` (`contact@nezor.es`).
 - [x] **`eas-cli` instalado** localmente (v18.8.1).
-- [x] **Proyecto vinculado** a Expo (`@jmtnez/FetroApp`, projectId `4ed28b79-ddbe-4d1d-bc63-b960583f9863`).
+- [x] **Proyecto vinculado** a Expo (`@nezor/FetroApp`, projectId `26bc6bdf-4fc0-437d-98bc-2aec27715629`, revinculado el 2026-09-15).
 - [x] **`app.json` configurado** con `package: "com.fatroibericas.app"` (provisional) y `versionCode: 1`.
 - [x] **`eas.json` creado** con tres perfiles: `development`, `preview` (APK descargable), `production` (AAB).
 - [x] **Plugin `expo-camera` configurado** con descripción de permiso en español.

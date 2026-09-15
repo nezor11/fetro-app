@@ -25,7 +25,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -42,9 +43,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "4ed28b79-ddbe-4d1d-bc63-b960583f9863"
+        "projectId": "26bc6bdf-4fc0-437d-98bc-2aec27715629"
       }
     },
-    "owner": "jmtnez"
+    "owner": "nezor"
   }
 }
