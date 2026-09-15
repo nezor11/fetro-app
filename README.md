@@ -35,6 +35,14 @@ Opciones disponibles:
 - Pulsa `a` para abrir en emulador Android
 - Escanea el QR con Expo Go en tu móvil
 
+### Tests
+
+```bash
+npm test
+```
+
+Tests unitarios con Jest (`jest-expo`) en `src/services/__tests__/`. Cubren el cliente del plugin (`pluginApi`), el almacenamiento de favoritos y la recuperación de sesión (`auth`), que son las piezas con más lógica y sin dependencia de UI.
+
 ## Estructura del proyecto
 
 ```
