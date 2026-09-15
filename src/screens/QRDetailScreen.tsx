@@ -20,6 +20,7 @@ import {
   getQRTypeDisplay,
 } from '../services/qrcodes';
 import { useAuth } from '../context/AuthContext';
+import ErrorState from '../components/ErrorState';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
@@ -56,7 +57,7 @@ export default function QRDetailScreen() {
   const { width } = useWindowDimensions();
   const { identifier } = route.params;
 
-  const { data: qr, isLoading, error } = useQuery({
+  const { data: qr, isLoading, error, refetch } = useQuery({
     queryKey: ['qrcode', identifier, cookie],
     queryFn: () => getQRCodeByIdentifier(cookie!, identifier),
     enabled: !!cookie && !!identifier,
@@ -71,7 +72,19 @@ export default function QRDetailScreen() {
     );
   }
 
-  if (error || !qr) {
+  // Error de red/servidor: no sabemos si el código existe. Distinto de
+  // "el backend respondió y no hay ningún QR con ese identifier".
+  if (error) {
+    return (
+      <ErrorState
+        title="No se pudo consultar el código"
+        message={(error as Error).message}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
+  if (!qr) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>❓</Text>

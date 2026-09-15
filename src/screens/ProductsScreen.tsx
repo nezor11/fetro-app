@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { getProducts, WPProduct } from '../services/products';
 import ProductCard from '../components/ProductCard';
+import ErrorState from '../components/ErrorState';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
@@ -33,6 +34,7 @@ export default function ProductsScreen() {
     hasNextPage,
     isFetchingNextPage,
     refetch,
+    error,
   } = useInfiniteQuery({
     queryKey: ['products', 'all'],
     queryFn: ({ pageParam }) => getProducts(pageParam),
@@ -56,6 +58,16 @@ export default function ProductsScreen() {
     );
   }
 
+  if (error && products.length === 0) {
+    return (
+      <ErrorState
+        title="No se pudieron cargar los productos"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
+    );
+  }
+
   return (
     <FlatList
       data={products}
@@ -71,7 +83,10 @@ export default function ProductsScreen() {
       contentContainerStyle={styles.list}
       refreshControl={
         <RefreshControl
-          refreshing={isRefetching}
+          // `isRefetching` también es true al cargar la siguiente página;
+          // sin este filtro el spinner de pull-to-refresh aparecía al
+          // hacer scroll infinito.
+          refreshing={isRefetching && !isFetchingNextPage}
           onRefresh={refetch}
           colors={[COLORS.primary]}
         />

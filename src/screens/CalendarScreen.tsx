@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import ErrorState from '../components/ErrorState';
 import { getVetsicsRaces } from '../services/vetsics';
 import { getTrainings } from '../services/trainings';
 import { getSolicitudes } from '../services/solicitudes';
@@ -92,6 +93,14 @@ export default function CalendarScreen() {
     vetsicsQuery.isLoading ||
     trainingsQuery.isLoading ||
     solicitudesQuery.isLoading;
+  const error =
+    vetsicsQuery.error ?? trainingsQuery.error ?? solicitudesQuery.error;
+
+  const refetchAll = () => {
+    vetsicsQuery.refetch();
+    trainingsQuery.refetch();
+    solicitudesQuery.refetch();
+  };
 
   const events = useMemo<CalendarEvent[]>(() => {
     return aggregateCalendarEvents({
@@ -136,6 +145,18 @@ export default function CalendarScreen() {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
+    );
+  }
+
+  // Con una fuente caída el calendario quedaría incompleto (días sin
+  // punto que sí tienen evento). Mejor avisar y dejar reintentar.
+  if (error) {
+    return (
+      <ErrorState
+        title="No se pudo cargar el calendario"
+        message={(error as Error).message}
+        onRetry={refetchAll}
+      />
     );
   }
 

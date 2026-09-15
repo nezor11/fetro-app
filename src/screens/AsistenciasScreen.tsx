@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import VetsicsCard from '../components/VetsicsCard';
 import TrainingCard from '../components/TrainingCard';
+import ErrorState from '../components/ErrorState';
 import { getVetsicsRaces, VetsicsRace } from '../services/vetsics';
 import {
   getTrainings,
@@ -74,6 +75,7 @@ export default function AsistenciasScreen() {
   const isLoading = vetsicsQuery.isLoading || trainingsQuery.isLoading;
   const isRefetching =
     vetsicsQuery.isRefetching || trainingsQuery.isRefetching;
+  const error = vetsicsQuery.error ?? trainingsQuery.error;
 
   const refetchAll = () => {
     vetsicsQuery.refetch();
@@ -121,6 +123,18 @@ export default function AsistenciasScreen() {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
+    );
+  }
+
+  // Si alguna de las dos fuentes falla no podemos afirmar "no tienes
+  // inscripciones": mostramos el error con opción de reintentar.
+  if (error) {
+    return (
+      <ErrorState
+        title="No se pudieron cargar tus asistencias"
+        message={(error as Error).message}
+        onRetry={refetchAll}
+      />
     );
   }
 

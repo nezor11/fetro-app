@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -9,67 +9,59 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { getPosts, WPPost } from '../services/posts';
 import PostCard from '../components/PostCard';
+import ErrorState from '../components/ErrorState';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
 
 type Route = RouteProp<RootStackParamList, 'CategoryPosts'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+/**
+ * Posts de una categoría con scroll infinito. Mismo patrón que
+ * `HomeScreen` (`useInfiniteQuery`), lo que resuelve dos problemas de
+ * la versión anterior basada en `useState`:
+ *
+ * - Los errores se tragaban con `console.error` y se mostraba "No hay
+ *   posts en esta categoría" aunque hubiera fallado la red.
+ * - Un `onEndReached` en vuelo durante un pull-to-refresh añadía la
+ *   página N a la lista ya reseteada → posts duplicados.
+ */
 export default function CategoryPostsScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Nav>();
   const { categoryId, categoryName } = route.params;
-  const [posts, setPosts] = useState<WPPost[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: categoryName });
   }, [navigation, categoryName]);
 
-  const fetchPosts = useCallback(
-    async (pageNum: number, refresh = false) => {
-      try {
-        const result = await getPosts(pageNum, 10, categoryId);
-        if (refresh) {
-          setPosts(result.data);
-        } else {
-          setPosts((prev) => [...prev, ...result.data]);
-        }
-        setTotalPages(result.totalPages);
-      } catch (err) {
-        console.error(err);
-      }
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    error,
+  } = useInfiniteQuery({
+    queryKey: ['posts', 'category', categoryId],
+    queryFn: ({ pageParam }) => getPosts(pageParam, 10, categoryId),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const nextPage = allPages.length + 1;
+      return nextPage <= lastPage.totalPages ? nextPage : undefined;
     },
-    [categoryId]
-  );
+  });
 
-  useEffect(() => {
-    fetchPosts(1, true).finally(() => setLoading(false));
-  }, [fetchPosts]);
+  const posts = useMemo<WPPost[]>(() => {
+    return data?.pages.flatMap((p) => p.data) ?? [];
+  }, [data]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setPage(1);
-    await fetchPosts(1, true);
-    setRefreshing(false);
-  }, [fetchPosts]);
-
-  const onEndReached = useCallback(async () => {
-    if (loadingMore || page >= totalPages) return;
-    setLoadingMore(true);
-    const nextPage = page + 1;
-    setPage(nextPage);
-    await fetchPosts(nextPage);
-    setLoadingMore(false);
-  }, [loadingMore, page, totalPages, fetchPosts]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -77,11 +69,13 @@ export default function CategoryPostsScreen() {
     );
   }
 
-  if (posts.length === 0) {
+  if (error && posts.length === 0) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.emptyText}>No hay posts en esta categoría</Text>
-      </View>
+      <ErrorState
+        title="No se pudieron cargar las noticias"
+        message={(error as Error).message}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -95,18 +89,25 @@ export default function CategoryPostsScreen() {
           onPress={() => navigation.navigate('PostDetail', { postId: item.id })}
         />
       )}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={posts.length === 0 ? styles.emptyList : styles.list}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
+          refreshing={isRefetching && !isFetchingNextPage}
+          onRefresh={refetch}
           colors={[COLORS.primary]}
         />
       }
-      onEndReached={onEndReached}
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+      }}
       onEndReachedThreshold={0.5}
+      ListEmptyComponent={
+        <View style={styles.centered}>
+          <Text style={styles.emptyText}>No hay posts en esta categoría</Text>
+        </View>
+      }
       ListFooterComponent={
-        loadingMore ? (
+        isFetchingNextPage ? (
           <ActivityIndicator size="small" color={COLORS.primary} style={styles.footer} />
         ) : null
       }
@@ -127,6 +128,9 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingVertical: SPACING.sm,
+  },
+  emptyList: {
+    flexGrow: 1,
   },
   footer: {
     paddingVertical: SPACING.md,

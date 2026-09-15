@@ -14,6 +14,7 @@ import { getPosts, WPPost } from '../services/posts';
 import { getProducts, WPProduct } from '../services/products';
 import PostCard from '../components/PostCard';
 import ProductCard from '../components/ProductCard';
+import ErrorState from '../components/ErrorState';
 import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -48,7 +49,7 @@ export default function SearchScreen() {
 
   const isValid = debounced.length >= 2;
 
-  const { data, isLoading } = useQuery<SearchResults>({
+  const { data, isLoading, error, refetch } = useQuery<SearchResults>({
     queryKey: queryKeys.search(debounced),
     queryFn: async () => {
       const [postsResult, productsResult] = await Promise.all([
@@ -63,7 +64,9 @@ export default function SearchScreen() {
   const posts = data?.posts ?? [];
   const products = data?.products ?? [];
   const totalResults = posts.length + products.length;
-  const hasSearched = isValid && !isLoading;
+  // Solo consideramos "buscado" si la petición terminó bien; un error
+  // de red no debe mostrarse como "sin resultados".
+  const hasSearched = isValid && !isLoading && !error;
 
   return (
     <View style={styles.container}>
@@ -93,6 +96,14 @@ export default function SearchScreen() {
           </Text>
         </View>
       )}
+
+      {isValid && !isLoading && error ? (
+        <ErrorState
+          title="No se pudo realizar la búsqueda"
+          message={(error as Error).message}
+          onRetry={() => refetch()}
+        />
+      ) : null}
 
       {hasSearched && totalResults === 0 && (
         <View style={styles.centered}>

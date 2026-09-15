@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import VetsicsCard from '../components/VetsicsCard';
 import SolicitudCard from '../components/SolicitudCard';
+import ErrorState from '../components/ErrorState';
 import { getVetsicsRaces, VetsicsRace } from '../services/vetsics';
 import { getSolicitudes, Solicitud } from '../services/solicitudes';
 import { useAuth } from '../context/AuthContext';
@@ -78,6 +79,7 @@ export default function MyRequestsScreen() {
   const isLoading = vetsicsQuery.isLoading || solicitudesQuery.isLoading;
   const isRefetching =
     vetsicsQuery.isRefetching || solicitudesQuery.isRefetching;
+  const error = vetsicsQuery.error ?? solicitudesQuery.error;
 
   /**
    * Refetch paralelo. Disparamos los dos aunque uno aún esté cargando;
@@ -131,6 +133,17 @@ export default function MyRequestsScreen() {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
+    );
+  }
+
+  // Si alguna fuente falla no podemos afirmar "no has solicitado nada".
+  if (error) {
+    return (
+      <ErrorState
+        title="No se pudieron cargar tus solicitudes"
+        message={(error as Error).message}
+        onRetry={refetchAll}
+      />
     );
   }
 

@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import { getCategories, WPCategory } from '../services/categories';
 import { getPosts } from '../services/posts';
+import ErrorState from '../components/ErrorState';
 import { queryKeys } from '../queryClient';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, FONTS, SPACING } from '../constants/theme';
@@ -130,7 +131,7 @@ export default function CategoriesScreen() {
    * `staleTime` (5 min por defecto), así que entrar/salir de la
    * pantalla no re-ejecuta las N peticiones.
    */
-  const { data: tree = [], isLoading } = useQuery({
+  const { data: tree = [], isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.categories(),
     queryFn: async () => {
       const cats = await getCategories(100, false);
@@ -166,6 +167,16 @@ export default function CategoriesScreen() {
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Cargando categorías...</Text>
       </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="No se pudieron cargar las categorías"
+        message={(error as Error).message}
+        onRetry={() => refetch()}
+      />
     );
   }
 
