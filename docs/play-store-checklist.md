@@ -109,7 +109,7 @@ Consecuencias a tener en cuenta:
 - [ ] Iconos finales (branding real).
 - [ ] Screenshots y feature graphic.
 - [ ] Política de privacidad publicada en URL pública.
-- [ ] Cuenta de Google Play Console creada y verificada (cuenta personal de Jorge, ver Decisión 5).
+- [x] Cuenta de Google Play Console creada (cuenta personal de Jorge, ver Decisión 5). Verificación pendiente a 2026-09-15.
 - [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).
 - [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
 - [ ] Build de **producción** lanzado: `eas build --profile production --platform android` → genera AAB.
