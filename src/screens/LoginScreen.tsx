@@ -22,6 +22,7 @@ export default function LoginScreen() {
   const navigation = useNavigation<Nav>();
   const { login, sessionMessage, clearSessionMessage } = useAuth();
   const [email, setEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,14 +84,29 @@ export default function LoginScreen() {
           />
 
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Tu contraseña"
-            placeholderTextColor={COLORS.textMuted}
-            secureTextEntry
-          />
+          <View style={styles.passwordRow}>
+            <TextInput
+              style={[styles.input, styles.passwordInput]}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Tu contraseña"
+              placeholderTextColor={COLORS.textMuted}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+            />
+            <TouchableOpacity
+              style={styles.passwordToggle}
+              onPress={() => setShowPassword((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              <Text style={styles.passwordToggleText}>
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -171,6 +187,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textLight,
     marginBottom: SPACING.xs,
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  passwordToggle: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  passwordToggleText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+    fontSize: FONTS.small,
   },
   input: {
     backgroundColor: COLORS.background,
