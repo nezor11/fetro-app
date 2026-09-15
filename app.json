@@ -16,7 +16,6 @@
     },
     "android": {
       "package": "com.jmtnez.fetroapp",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#460032",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -25,6 +24,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
@@ -46,6 +47,12 @@
         "projectId": "26bc6bdf-4fc0-437d-98bc-2aec27715629"
       }
     },
-    "owner": "nezor"
+    "owner": "nezor",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/26bc6bdf-4fc0-437d-98bc-2aec27715629"
+    }
   }
 }
