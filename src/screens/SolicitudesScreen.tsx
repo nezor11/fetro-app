@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import SolicitudCard from '../components/SolicitudCard';
+import ErrorState from '../components/ErrorState';
 import {
   getSolicitudes,
   Solicitud,
@@ -67,14 +68,11 @@ export default function SolicitudesScreen() {
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>
-          No se pudieron cargar las solicitudes
-        </Text>
-        <Text style={styles.errorText}>
-          {(error as Error).message || 'Error desconocido'}
-        </Text>
-      </View>
+      <ErrorState
+        title="No se pudieron cargar las solicitudes"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
     );
   }
 
@@ -145,18 +143,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.small,
     color: COLORS.textLight,
     lineHeight: 18,
-  },
-  errorTitle: {
-    fontSize: FONTS.large,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: FONTS.small,
-    color: COLORS.textLight,
-    textAlign: 'center',
   },
   emptyText: {
     fontSize: FONTS.regular,

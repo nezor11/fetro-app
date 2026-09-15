@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import TrainingCard from '../components/TrainingCard';
+import ErrorState from '../components/ErrorState';
 import { getTrainings } from '../services/trainings';
 import { useAuth } from '../context/AuthContext';
 import { queryKeys } from '../queryClient';
@@ -45,12 +46,11 @@ export default function TrainingsScreen() {
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>No se pudieron cargar las formaciones</Text>
-        <Text style={styles.errorText}>
-          {(error as Error).message || 'Error desconocido'}
-        </Text>
-      </View>
+      <ErrorState
+        title="No se pudieron cargar las formaciones"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
     );
   }
 
@@ -91,18 +91,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.lg,
     backgroundColor: COLORS.background,
-  },
-  errorTitle: {
-    fontSize: FONTS.large,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: FONTS.small,
-    color: COLORS.textLight,
-    textAlign: 'center',
   },
   emptyText: {
     fontSize: FONTS.regular,

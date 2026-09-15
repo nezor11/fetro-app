@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import ConsultaCard from '../components/ConsultaCard';
+import ErrorState from '../components/ErrorState';
 import {
   getSpecialities,
   buildSpecialityGroups,
@@ -70,14 +71,11 @@ export default function ConsultasScreen() {
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorTitle}>
-          No se pudieron cargar las consultas
-        </Text>
-        <Text style={styles.errorText}>
-          {(error as Error).message || 'Error desconocido'}
-        </Text>
-      </View>
+      <ErrorState
+        title="No se pudieron cargar las consultas"
+        message={(error as Error).message}
+        onRetry={refetch}
+      />
     );
   }
 
@@ -181,18 +179,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.xsmall,
     color: COLORS.textMuted,
     fontWeight: '600',
-  },
-  errorTitle: {
-    fontSize: FONTS.large,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: FONTS.small,
-    color: COLORS.textLight,
-    textAlign: 'center',
   },
   emptyText: {
     fontSize: FONTS.regular,
