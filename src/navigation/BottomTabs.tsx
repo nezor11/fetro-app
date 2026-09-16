@@ -23,7 +23,7 @@ const Tab = createBottomTabNavigator<BottomTabParamList>();
  * Las únicas tabs que se muestran en el bottom bar. El resto (Trainings,
  * Vetsics, Consultas, Search) siguen registradas como Tab.Screen para que
  * `navigation.navigate('Vetsics')` siga funcionando desde cualquier sitio,
- * pero su botón se oculta con `tabBarButton: () => null`. Se llega a ellas
+ * pero su botón se oculta (`tabBarItemStyle: display none`). Se llega a ellas
  * vía el hub "Más" (MoreScreen).
  */
 const VISIBLE_TABS: ReadonlyArray<keyof BottomTabParamList> = [
@@ -70,11 +70,16 @@ export default function BottomTabs() {
         ),
         // Oculta del bar las tabs que solo se alcanzan desde "Más" sin
         // desmontar la ruta (el estado de cada pantalla se preserva).
-        tabBarButton: VISIBLE_TABS.includes(
-          route.name as keyof BottomTabParamList
-        )
-          ? undefined
-          : () => null,
+        // `display: 'none'` las saca también del reparto de ancho: con
+        // solo `tabBarButton: () => null` el hueco seguía ahí y las cinco
+        // visibles quedaban tan estrechas que sus etiquetas se recortaban.
+        ...(VISIBLE_TABS.includes(route.name as keyof BottomTabParamList)
+          ? {}
+          : {
+              tabBarButton: () => null,
+              tabBarItemStyle: { display: 'none' as const },
+            }),
+        tabBarLabelStyle: { fontSize: 11 },
       })}
     >
       <Tab.Screen
