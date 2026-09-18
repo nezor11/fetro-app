@@ -54,11 +54,7 @@ Play Console te pide cubrir varias secciones antes de dejar publicar siquiera en
 
 - **COVID-19 contact tracing or status app** — No.
 
-- **Data safety** — formulario detallado sobre qué datos recoge, si los comparte, si los cifra. Para FetroApp:
-  - Datos recogidos: Personal info (Name, Email, Address, Phone), App activity (in-app actions), App info & performance (Crash logs).
-  - Data is encrypted in transit: Yes (HTTPS/TLS).
-  - Users can request data deletion: Yes (vía pantalla "Dar de baja mi cuenta" + email de contacto del desarrollador).
-  - Data shared with third parties: No.
+- **Data safety** — formulario detallado sobre qué datos recoge, si los comparte y si los cifra. Las respuestas están en `docs/play-console-questionnaires.md`, que es la referencia única. La app no lleva SDK de analítica ni de crashes, así que no se declaran registros de fallos.
 
 - **Government apps** — No.
 
@@ -75,7 +71,7 @@ Recomendación: subir directamente el AAB que generaríamos con `eas build --pro
 Pasos:
 
 1. **Testing → Internal testing → Create new release**.
-2. **Upload** → seleccionar el AAB que descargaste de EAS (o usar `eas submit --platform android --profile production` para que EAS lo suba automáticamente).
+2. **Upload** → seleccionar el AAB que descargaste de EAS. La primera subida tiene que ser manual: la API de Google Play no acepta un AAB hasta que la app tiene al menos una versión subida desde la consola. A partir de ahí se puede usar `eas submit --platform android --profile production`.
 3. Rellenar **Release notes** (qué hay nuevo en este build, en español).
 4. **Save → Review release → Start rollout**.
 
