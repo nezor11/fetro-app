@@ -2,6 +2,8 @@
 
 Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. Marcado al **2026-04-23**.
 
+El recorrido en Play Console, pantalla a pantalla, está en [`play-console-paso-a-paso.md`](play-console-paso-a-paso.md).
+
 ---
 
 ## ✅ Hecho
