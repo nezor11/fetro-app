@@ -71,6 +71,6 @@ Resultado esperado: **PEGI 3 / Everyone**.
 
 ## Notas a revisar antes de enviar
 
-**Nota A · "Compartido con terceros".** Los datos los recibe el WordPress de Fatro Ibérica. Como el desarrollador que publica es Jorge (cuenta personal), ese backend es formalmente un tercero, y lo correcto sería marcar **Compartido: Sí** con finalidad "Funciones de la app" en cada tipo de dato. Google considera "compartir" transferir datos a otra organización, con la excepción de proveedores de servicio que actúan en nombre del desarrollador. La política de privacidad describe a Fatro como encargado del tratamiento técnico, lo que encajaría en esa excepción. Hay que elegir una lectura y ser coherente entre Data Safety y la política. Recomendación conservadora: marcar Compartido: Sí.
+**Nota A · "Compartido con terceros" → Sí.** Los datos los recibe el WordPress de Fatro Ibérica, y la política de privacidad publicada nombra a Fatro Ibérica como responsable del tratamiento, no como proveedor que actúa en nombre del desarrollador. Para Google eso es transferir datos a otra organización, así que en cada tipo de dato hay que marcar **Compartido: Sí** con finalidad "Funciones de la app". Así Data Safety y la política dicen lo mismo.
 
 **Nota B · Contenido veterinario.** La app muestra productos veterinarios y consultas a especialistas. No es contenido médico para humanos ni ofrece diagnóstico, así que responder "No" a contenido sanitario y usar la categoría Negocios evita la revisión extra de apps de salud.
