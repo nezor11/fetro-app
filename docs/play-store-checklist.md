@@ -12,7 +12,7 @@ Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. 
 - [x] **`app.json` configurado** con `package: "com.fatroibericas.app"` (provisional) y `versionCode: 1`.
 - [x] **`eas.json` creado** con tres perfiles: `development`, `preview` (APK descargable), `production` (AAB).
 - [x] **Plugin `expo-camera` configurado** con descripción de permiso en español.
-- [x] **Permisos Android limpios** (solo CAMERA). RECORD_AUDIO se había vuelto a colar en `app.json` y lo añade expo-camera por defecto; desde el 2026-09-18 se bloquea con `recordAudioAndroid: false` y `blockedPermissions`. El AAB versionCode 3 aún lo pedía: hay que subir un build nuevo.
+- [x] **Permisos Android limpios** (solo CAMERA). RECORD_AUDIO se había vuelto a colar en `app.json` y lo añade expo-camera por defecto; desde el 2026-09-18 se bloquea con `recordAudioAndroid: false` y `blockedPermissions`. El AAB versionCode 3 aún lo pedía; el versionCode 4 ya no.
 - [x] **Primer build de preview lanzado** (build `431dd944-8bbb-4164-9cbf-2106fd7d4c70`).
 - [x] **Política de privacidad** redactada en `docs/privacy-policy.md` y publicada en GitHub Pages.
 
@@ -111,7 +111,7 @@ Consecuencias a tener en cuenta:
 - [x] Cuenta de Google Play Console creada (cuenta personal de Jorge, ver Decisión 5). Verificación pendiente a 2026-09-15.
 - [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).
 - [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
-- [x] Build de **producción** definitivo el 2026-09-17 (build `1a13a110`, versionCode 3, `com.jmtnez.fetroapp`, con expo-updates; sustituye al `55626f85`): `eas build --profile production --platform android`.
+- [x] Build de **producción** definitivo el 2026-09-18 (build `04b98962`, versionCode 4, `com.jmtnez.fetroapp`, con expo-updates y sin RECORD_AUDIO; sustituye al `1a13a110`, que pedía micrófono): `npx eas-cli build --profile production --platform android`.
 - [ ] Subida automática del AAB con `eas submit --profile production --platform android` (requiere configurar service account de Google Play Developer API).
 
 ---
