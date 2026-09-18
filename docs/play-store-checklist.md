@@ -12,7 +12,7 @@ Estado de los pasos necesarios para publicar **FetroApp** en Google Play Store. 
 - [x] **`app.json` configurado** con `package: "com.fatroibericas.app"` (provisional) y `versionCode: 1`.
 - [x] **`eas.json` creado** con tres perfiles: `development`, `preview` (APK descargable), `production` (AAB).
 - [x] **Plugin `expo-camera` configurado** con descripción de permiso en español.
-- [x] **Permisos Android limpios** (solo CAMERA, sin RECORD_AUDIO accidental).
+- [x] **Permisos Android limpios** (solo CAMERA). RECORD_AUDIO se había vuelto a colar en `app.json` y lo añade expo-camera por defecto; desde el 2026-09-18 se bloquea con `recordAudioAndroid: false` y `blockedPermissions`. El AAB versionCode 3 aún lo pedía: hay que subir un build nuevo.
 - [x] **Primer build de preview lanzado** (build `431dd944-8bbb-4164-9cbf-2106fd7d4c70`).
 - [x] **Política de privacidad** redactada en `docs/privacy-policy.md` y publicada en GitHub Pages.
 
