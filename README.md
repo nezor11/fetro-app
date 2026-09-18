@@ -8,6 +8,8 @@ Aplicación móvil desarrollada con React Native y Expo que consume la REST API 
 - **TypeScript**
 - **React Navigation** (Stack + Bottom Tabs)
 - **Axios** para consumo de API REST
+- **TanStack Query** para caché y estados de carga
+- **EAS Build** y **EAS Update** para builds y actualizaciones OTA
 - **react-native-render-html** para renderizado de contenido WordPress
 
 ## Requisitos
@@ -46,30 +48,22 @@ Tests unitarios con Jest (`jest-expo`) en `src/services/__tests__/`. Cubren el c
 ## Estructura del proyecto
 
 ```
-FatroApp/
-├── App.tsx                          # Entry point
-├── src/
-│   ├── components/
-│   │   └── PostCard.tsx             # Tarjeta de noticia reutilizable
-│   ├── constants/
-│   │   ├── api.ts                   # Base URL de la API
-│   │   └── theme.ts                 # Colores, fuentes, espaciados
-│   ├── navigation/
-│   │   ├── types.ts                 # Tipos TypeScript para navegación
-│   │   ├── RootNavigator.tsx        # Stack Navigator principal
-│   │   └── BottomTabs.tsx           # Barra de navegación inferior
-│   ├── screens/
-│   │   ├── HomeScreen.tsx           # Listado de noticias
-│   │   ├── CategoriesScreen.tsx     # Árbol de categorías
-│   │   ├── CategoryPostsScreen.tsx  # Posts filtrados por categoría
-│   │   ├── PostDetailScreen.tsx     # Detalle de noticia
-│   │   ├── ProductsScreen.tsx       # Listado de productos
-│   │   └── SearchScreen.tsx         # Búsqueda global
-│   └── services/
-│       ├── api.ts                   # Instancia Axios configurada
-│       ├── posts.ts                 # Servicio de posts con paginación
-│       ├── categories.ts            # Servicio de categorías
-│       └── media.ts                 # Servicio de media
+fetro-app/
+├── App.tsx                  # Entry point: providers (Query, Auth, Favoritos) y navegación
+├── app.json / eas.json      # Configuración de Expo, EAS Build y EAS Update
+├── proxy-server.js          # Proxy CORS para desarrollar en web
+├── scripts/                 # Generación de iconos y preview del splash
+├── store/                   # Material de la ficha de Play Store (icono, capturas, textos)
+├── docs/                    # Guías, checklists y páginas públicas (GitHub Pages)
+└── src/
+    ├── components/          # Tarjetas de listado, FavoriteButton, ErrorState
+    ├── constants/           # Host de la API y tema
+    ├── context/             # AuthContext y FavoritesContext
+    ├── navigation/          # Stack principal, barra inferior y tipos
+    ├── screens/             # Una pantalla por archivo: listados, detalles, auth, perfil, QR, WebView
+    ├── services/            # Clientes de la REST API y del plugin, sesión y favoritos
+    │   └── __tests__/       # Tests unitarios con Jest
+    └── queryClient.ts       # Configuración de TanStack Query
 ```
 
 ## API de WordPress
