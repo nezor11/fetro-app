@@ -1,6 +1,6 @@
 # Play Console · Publicación paso a paso
 
-Guía para llevar FetroApp desde el AAB ya generado hasta producción en Google Play, con la cuenta personal de desarrollador (`martinezortiz@gmail.com`). Redactada el 2026-09-18.
+Guía para llevar FetroApp desde el AAB ya generado hasta producción en Google Play, con la cuenta personal de desarrollador **"Jorge Mtnez"** (ID `7549371768525842906`), que cuelga de `contact@nezor.es`, no de `martinezortiz@gmail.com`. Es la misma cuenta que ya tiene publicada "Easy Xtream Football". Redactada el 2026-09-18, actualizada el 2026-09-25.
 
 Qué hay ya listo y dónde está:
 
@@ -24,9 +24,27 @@ El recorrido completo tiene siete fases. La más larga es la 5: las cuentas pers
 
 ---
 
+## Estado a 2026-09-25
+
+La app **FetroApp** (`com.jmtnez.fetroapp`, ID `4972189354201991800`) se creó el 2026-09-24 y está en Borrador. Hecho desde la consola:
+
+- Política de privacidad, Anuncios (no), ID de publicidad (no), Aplicaciones gubernamentales (no), Funciones financieras (ninguna), Salud (ninguna).
+- Seguridad de los datos: cuestionario completo y **guardado como borrador**. No se puede enviar hasta rellenar la audiencia objetivo.
+- Ficha principal: nombre, descripciones, icono, gráfico de funciones y 5 capturas (en orden 01 → 05). Recursos declarados como no generados por IA.
+- Configuración de la tienda: categoría **Economía** (así llama la consola en español a "Business"), email `contact@nezor.es`, web `https://nezor11.github.io/fetro-app/`.
+
+Pendiente, en este orden porque cada paso desbloquea el siguiente:
+
+1. **Datos de inicio de sesión** (antes "Acceso a la aplicación"): requiere la contraseña de la cuenta de demo, que no está en el repo.
+2. **Contenido y audiencia objetivo**: bloqueado hasta completar el punto 1.
+3. **Seguridad de los datos**: pasar de borrador a enviado cuando esté el punto 2.
+4. **Clasificación de contenido** (IARC): al empezar el cuestionario se aceptan los términos de IARC.
+5. **Prueba interna**: subir el AAB versionCode 4 (63 MB) a mano; está copiado en `~/Downloads/fetroapp-v4-versionCode4.aab`.
+6. Prueba cerrada de 14 días con 12 testers: el panel de la app confirma que aplica a esta cuenta.
+
 ## Fase 0 · Cuenta de desarrollador verificada
 
-1. Entra en `https://play.google.com/console` con `martinezortiz@gmail.com`.
+1. Entra en `https://play.google.com/console` con `contact@nezor.es` (la URL de la consola lleva `/u/1/` cuando esa cuenta es la segunda de la sesión de Chrome). Con `martinezortiz@gmail.com` la consola muestra el alta de cuenta nueva: esa cuenta no tiene consola de desarrollador.
 2. Comprueba en **Panel** que no quede ningún aviso pendiente. Las cuentas personales tienen que completar:
    - Verificación de identidad (DNI/pasaporte).
    - Verificación del teléfono de contacto.
@@ -77,9 +95,9 @@ Si aparece algún bloque más que no esté en esta tabla (Google añade alguno d
    - Capturas de tablet: se pueden dejar vacías. La app es solo vertical y no hace falta declarar soporte de tablet.
 4. **Guardar**.
 5. **Presencia en Play Store → Configuración de la ficha de Play Store**:
-   - Categoría: **Empresa** (en la consola en español la categoría "Business" puede aparecer como "Empresa" o "Negocios")
+   - Categoría: **Economía**. Es como la consola en español (es-ES) llama a la categoría "Business"; no existe "Empresa" ni "Negocios" en la lista.
    - Etiquetas: veterinaria, formación, comunidad (si las ofrece)
-   - Email: `martinezortiz@gmail.com`
+   - Email: `contact@nezor.es` (el de la cuenta de desarrollador; se muestra en la ficha)
    - Sitio web: `https://nezor11.github.io/fetro-app/`
    - Teléfono: opcional, mejor dejarlo vacío
 6. **Guardar**.
@@ -94,7 +112,7 @@ Desde `https://expo.dev/accounts/nezor/projects/FetroApp/builds/04b98962-c01a-47
 npx eas-cli build:list --platform android --limit 1
 ```
 
-y descargar la URL del artefacto `.aab` que aparece.
+y descargar la URL del artefacto `.aab` que aparece. Pesa unos 63 MB. El 2026-09-25 quedó copiado en `~/Downloads/fetroapp-v4-versionCode4.aab`.
 
 ### 4.2 Crear la versión
 

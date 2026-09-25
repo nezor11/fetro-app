@@ -92,7 +92,7 @@ La URL es **obligatoria** para Play Store y se introduce al crear la app en Play
 
 ### Decisión 5 · Cuenta Google Play Console → ✅ cuenta personal de Jorge (2026-09-15)
 
-Se publica desde la cuenta personal de Jorge (`martinezortiz@gmail.com`). Coste único de 25 USD y verificación de identidad (DNI/pasaporte).
+Se publica desde la cuenta personal de Jorge, "Jorge Mtnez", que cuelga de `contact@nezor.es` (comprobado el 2026-09-25: `martinezortiz@gmail.com` no tiene consola de desarrollador). La cuenta ya estaba creada, verificada y con otra app en producción, así que no hubo que pagar ni verificar nada.
 
 Consecuencias a tener en cuenta:
 
@@ -110,8 +110,10 @@ Consecuencias a tener en cuenta:
 - [x] Textos de la ficha (nombre, descripción breve y completa, notas de versión): `store/listing.md`.
 - [x] URL de borrado de cuenta (obligatoria para apps con registro): `https://nezor11.github.io/fetro-app/delete-account`.
 - [x] Política de privacidad publicada en URL pública (`https://nezor11.github.io/fetro-app/privacy-policy`).
-- [x] Cuenta de Google Play Console creada (cuenta personal de Jorge, ver Decisión 5). Verificación pendiente a 2026-09-15.
-- [ ] Cuestionario **Data Safety** completado en Play Console (respuestas preparadas en `docs/play-console-questionnaires.md`).
+- [x] Cuenta de Google Play Console: la personal de Jorge bajo `contact@nezor.es`, ya verificada (ver Decisión 5).
+- [x] App creada en Play Console el 2026-09-24 (`com.jmtnez.fetroapp`, ID `4972189354201991800`).
+- [x] Ficha principal y configuración de la tienda rellenadas el 2026-09-25.
+- [ ] Cuestionario **Data Safety**: completo y guardado como borrador el 2026-09-25; falta enviarlo, y para eso hay que rellenar antes credenciales de demo y audiencia objetivo.
 - [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
 - [x] Build de **producción** definitivo el 2026-09-18 (build `04b98962`, versionCode 4, `com.jmtnez.fetroapp`, con expo-updates y sin RECORD_AUDIO; sustituye al `1a13a110`, que pedía micrófono): `npx eas-cli build --profile production --platform android`.
 - [ ] Subida automática del AAB con `eas submit --profile production --platform android` (requiere configurar service account de Google Play Developer API).

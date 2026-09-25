@@ -53,12 +53,12 @@ Necesitas una cuenta de la Comunidad FATRO para acceder. Si no la tienes, puedes
 
 ## Categoría y etiquetas
 
-- Categoría: Negocios
+- Categoría: Economía (nombre de "Business" en la consola es-ES)
 - Etiquetas sugeridas: veterinaria, formación, comunidad
 
 ## Datos de contacto
 
-- Email: el de la cuenta de desarrollador (`martinezortiz@gmail.com`).
+- Email: el de la cuenta de desarrollador (`contact@nezor.es`).
 - Sitio web: `https://nezor11.github.io/fetro-app/`
 - Política de privacidad: `https://nezor11.github.io/fetro-app/privacy-policy`
 - Borrado de cuenta: `https://nezor11.github.io/fetro-app/delete-account`
