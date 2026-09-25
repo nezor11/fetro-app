@@ -113,6 +113,7 @@ Consecuencias a tener en cuenta:
 - [x] Cuenta de Google Play Console: la personal de Jorge bajo `contact@nezor.es`, ya verificada (ver Decisión 5).
 - [x] App creada en Play Console el 2026-09-24 (`com.jmtnez.fetroapp`, ID `4972189354201991800`).
 - [x] Ficha principal y configuración de la tienda rellenadas el 2026-09-25.
+- [x] AAB versionCode 4 subido a mano y publicado en **prueba interna** el 2026-09-25 (lista de testers "Internos").
 - [ ] Cuestionario **Data Safety**: completo y guardado como borrador el 2026-09-25; falta enviarlo, y para eso hay que rellenar antes credenciales de demo y audiencia objetivo.
 - [ ] Cuestionario **Content Rating** completado (respuestas preparadas en el mismo documento; PEGI 3 esperado).
 - [x] Build de **producción** definitivo el 2026-09-18 (build `04b98962`, versionCode 4, `com.jmtnez.fetroapp`, con expo-updates y sin RECORD_AUDIO; sustituye al `1a13a110`, que pedía micrófono): `npx eas-cli build --profile production --platform android`.
