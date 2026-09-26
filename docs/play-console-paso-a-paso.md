@@ -34,14 +34,9 @@ La app **FetroApp** (`com.jmtnez.fetroapp`, ID `4972189354201991800`) se creó e
 - Prueba interna publicada (versión 4, 25 sept 21:57) con la lista "Internos". La cuenta tiene además una lista "Testers Community" de 136 correos que sirve para llegar a los 12 de la prueba cerrada.
 - Configuración de la tienda: categoría **Economía** (así llama la consola en español a "Business"), email `contact@nezor.es`, web `https://nezor11.github.io/fetro-app/`.
 
-Pendiente, en este orden porque cada paso desbloquea el siguiente:
+Actualización del 2026-09-26: **todo el contenido de la aplicación está completo** (11 de 11 tareas del panel). Credenciales de demo introducidas (cuenta `jorge.test@novicell.es`, verificada contra el backend), audiencia solo 18+, Seguridad de los datos enviado, IARC completado con resultado **PEGI 3 / Para todos** (la única respuesta "Sí" fue "contenido en línea", porque la app carga noticias y productos de la web de Fatro; sus cuatro preguntas de seguimiento van en "No").
 
-1. **Datos de inicio de sesión** (antes "Acceso a la aplicación"): requiere la contraseña de la cuenta de demo, que no está en el repo.
-2. **Contenido y audiencia objetivo**: bloqueado hasta completar el punto 1.
-3. **Seguridad de los datos**: pasar de borrador a enviado cuando esté el punto 2.
-4. **Clasificación de contenido** (IARC): al empezar el cuestionario se aceptan los términos de IARC.
-5. ~~Prueba interna~~: hecha el 2026-09-25 a las 21:57. Versión `4 (1.0.0)` publicada en el canal interno, lista de testers "Internos" (3 correos, heredada de la otra app). Enlace de participación: `https://play.google.com/apps/internaltest/4701180262949702930`. Advertencias al publicar: sin testers (ya resuelto) y sin archivo de desofuscación (normal en Expo).
-6. Prueba cerrada de 14 días con 12 testers: el panel de la app confirma que aplica a esta cuenta.
+Prueba cerrada (canal **Alpha**) configurada el 2026-09-26: país España, listas de testers "Internos" (3) y "Testers Community" (136), correo de sugerencias `contact@nezor.es`, versión `4 (1.0.0)` añadida desde la biblioteca. Todo queda en **Resumen de publicación** como 14 cambios pendientes de **Enviar a revisión**. Ese envío es el siguiente paso; con él empieza la revisión de Google de la ficha y del contenido.
 
 ## Fase 0 · Cuenta de desarrollador verificada
 
