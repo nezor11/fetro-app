@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CameraView,
   useCameraPermissions,
@@ -65,6 +66,11 @@ export default function QRScanScreen() {
   const navigation = useNavigation<Nav>();
   const { cookie } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
+  // Esta pantalla no vive dentro del tab navigator, así que nadie
+  // reserva el hueco de la barra de navegación de Android. Con
+  // edge-to-edge (SDK 55) el bloque manual quedaba debajo de los
+  // botones del sistema.
+  const insets = useSafeAreaInsets();
   const [manualIdentifier, setManualIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   // Evita navegaciones múltiples por el mismo QR.
@@ -221,7 +227,12 @@ export default function QRScanScreen() {
 
   function renderManualInput() {
     return (
-      <View style={styles.manualBlock}>
+      <View
+        style={[
+          styles.manualBlock,
+          { paddingBottom: SPACING.md + insets.bottom },
+        ]}
+      >
         <Text style={styles.manualLabel}>
           ¿No puedes escanear? Introduce el código a mano:
         </Text>
