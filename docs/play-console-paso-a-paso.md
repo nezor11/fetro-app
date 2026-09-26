@@ -36,7 +36,7 @@ La app **FetroApp** (`com.jmtnez.fetroapp`, ID `4972189354201991800`) se creó e
 
 Actualización del 2026-09-26: **todo el contenido de la aplicación está completo** (11 de 11 tareas del panel). Credenciales de demo introducidas (cuenta `jorge.test@novicell.es`, verificada contra el backend), audiencia solo 18+, Seguridad de los datos enviado, IARC completado con resultado **PEGI 3 / Para todos** (la única respuesta "Sí" fue "contenido en línea", porque la app carga noticias y productos de la web de Fatro; sus cuatro preguntas de seguimiento van en "No").
 
-Prueba cerrada (canal **Alpha**) configurada el 2026-09-26: país España, listas de testers "Internos" (3) y "Testers Community" (136), correo de sugerencias `contact@nezor.es`, versión `4 (1.0.0)` añadida desde la biblioteca. Todo queda en **Resumen de publicación** como 14 cambios pendientes de **Enviar a revisión**. Ese envío es el siguiente paso; con él empieza la revisión de Google de la ficha y del contenido.
+Prueba cerrada (canal **Alpha**) configurada el 2026-09-26: país España, listas de testers "Internos" (3) y "Testers Community" (136), correo de sugerencias `contact@nezor.es`, versión `4 (1.0.0)` añadida desde la biblioteca. Los 14 cambios se **enviaron a revisión el 2026-09-26** (la consola indica que la revisión suele tardar hasta 7 días). Mientras tanto no hay nada que hacer en la consola: cuando Google apruebe, compartir el enlace de la prueba cerrada con los testers y anotar la fecha en que 12 hayan aceptado.
 
 ## Fase 0 · Cuenta de desarrollador verificada
 

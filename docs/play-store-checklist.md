@@ -114,6 +114,7 @@ Consecuencias a tener en cuenta:
 - [x] App creada en Play Console el 2026-09-24 (`com.jmtnez.fetroapp`, ID `4972189354201991800`).
 - [x] Ficha principal y configuración de la tienda rellenadas el 2026-09-25.
 - [x] AAB versionCode 4 subido a mano y publicado en **prueba interna** el 2026-09-25 (lista de testers "Internos").
+- [x] Prueba cerrada (Alpha) configurada y **enviada a revisión** junto con la ficha y el contenido el 2026-09-26.
 - [x] Cuestionario **Data Safety** completado y guardado (2026-09-26).
 - [x] Cuestionario **Content Rating** completado el 2026-09-26: PEGI 3 / Para todos.
 - [x] Build de **producción** definitivo el 2026-09-18 (build `04b98962`, versionCode 4, `com.jmtnez.fetroapp`, con expo-updates y sin RECORD_AUDIO; sustituye al `1a13a110`, que pedía micrófono): `npx eas-cli build --profile production --platform android`.
