@@ -169,7 +169,7 @@ export async function register(
 export async function getNonce(): Promise<string> {
   try {
     const response = await axios.get(
-      `${PLUGIN_BASE_URL}/api/get_nonce/?controller=user&method=register&insecure=cool`
+      `${PLUGIN_BASE_URL}/api/get_nonce/?controller=user&method=register`
     );
     return response.data.nonce;
   } catch (err) {

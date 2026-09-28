@@ -26,7 +26,7 @@ describe('postPlugin', () => {
     setSessionInvalidHandler(null);
   });
 
-  it('envía POST form-urlencoded con insecure=cool y omite nulos', async () => {
+  it('envía POST form-urlencoded sin insecure=cool y omite nulos', async () => {
     mockedPost.mockResolvedValue({ data: { status: 'ok' } });
 
     await postPlugin('/api/user/x/', { cookie: 'abc', page: 2, empty: null, u: undefined });
@@ -34,7 +34,7 @@ describe('postPlugin', () => {
     expect(mockedPost).toHaveBeenCalledTimes(1);
     const [url, body, config] = mockedPost.mock.calls[0];
     expect(url).toMatch(/\/api\/user\/x\/$/);
-    expect(new URLSearchParams(body).get('insecure')).toBe('cool');
+    expect(new URLSearchParams(body).has('insecure')).toBe(false);
     expect(new URLSearchParams(body).get('cookie')).toBe('abc');
     expect(new URLSearchParams(body).get('page')).toBe('2');
     expect(new URLSearchParams(body).has('empty')).toBe(false);

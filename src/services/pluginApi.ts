@@ -64,7 +64,7 @@ export async function postPlugin<T = any>(
 ): Promise<T> {
   const response = await axios.post<T>(
     `${PLUGIN_BASE_URL}${path}`,
-    toFormBody({ insecure: 'cool', ...params }),
+    toFormBody(params),
     {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       timeout,
