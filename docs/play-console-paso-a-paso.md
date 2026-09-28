@@ -148,7 +148,7 @@ Durante esos 14 días:
 
 - Los testers tienen que tener la app **instalada** y, a ser posible, usarla. Google pregunta después por la participación.
 - Guarda el feedback que llegue (capturas, emails). Te hará falta en la fase 6.
-- Si hay que arreglar algo: si el cambio es solo JS, basta con `eas update --channel production`. Si toca código nativo o permisos, hay que sacar un build nuevo (`npx eas-cli build --profile production --platform android`; el versionCode sube solo) y crear una versión nueva en el mismo canal. El contador de 14 días no se reinicia por subir versiones.
+- Si hay que arreglar algo: si el cambio es solo JS, basta con `npx eas-cli update --channel production --environment production --message "..."`. Si toca código nativo o permisos, hay que sacar un build nuevo (`npx eas-cli build --profile production --platform android`; el versionCode sube solo) y crear una versión nueva en el mismo canal. El contador de 14 días no se reinicia por subir versiones.
 
 ## Fase 6 · Solicitar acceso a producción
 
@@ -179,8 +179,10 @@ Google responde en unos 7 días o menos. Si lo rechaza, suele pedir otros 14 dí
 **Cambios solo en JS/TS o assets** → actualización OTA, sin pasar por Google:
 
 ```bash
-eas update --channel production --message "Descripción del cambio"
+npx eas-cli update --channel production --environment production --message "Descripción del cambio"
 ```
+
+`--environment` es obligatorio desde eas-cli 18 cuando el comando corre sin terminal interactiva (por ejemplo desde un script o desde el asistente); en una terminal normal, si falta, lo pregunta. Indica de qué entorno de EAS se toman las variables `EXPO_PUBLIC_*` al empaquetar: para el canal `production` siempre `production`, que apunta a `https://fatroiberica.es`.
 
 `runtimeVersion` sigue la política `appVersion`: la OTA solo llega a los binarios con la misma `version` de `app.json` (ahora `1.0.0`).
 
