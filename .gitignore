@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Copia local de la instalación WordPress de Fatro (solo para análisis, nunca se sube)
+/fatro-app/
