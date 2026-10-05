@@ -42,3 +42,6 @@ yarn-error.*
 
 # Copia local de la instalación WordPress de Fatro (solo para análisis, nunca se sube)
 /fatro-app/
+
+# Informes de Testers Community (pueden incluir datos de los testers)
+/informes-testers/
